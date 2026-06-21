@@ -1,0 +1,35 @@
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Production builds
+dist/
+client/dist/
+
+# Environments and Secrets
+.env
+server/.env
+*.env
+*.env.local
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Uploads and temporary files
+server/uploads/*
+!server/uploads/avatars/
+!server/uploads/chat-files/
+server/uploads/avatars/*
+server/uploads/chat-files/*
+server/verify-token.txt
+server/reset-token.txt
