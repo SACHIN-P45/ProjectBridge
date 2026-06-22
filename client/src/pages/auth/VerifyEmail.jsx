@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser } from '../../store/slices/authSlice';
 import BackgroundAnimation from '../../components/common/BackgroundAnimation';
+import AuthVisualShowcase from '../../components/common/AuthVisualShowcase';
 import api from '../../api/axios';
 
 export default function VerifyEmail() {
@@ -62,52 +63,49 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg)]">
-      {/* Left Panel - Visuals */}
-      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-indigo-900 via-violet-800 to-brand-600 relative overflow-hidden items-center justify-center p-16">
-        <BackgroundAnimation />
-        <div className="relative z-10 max-w-xl text-white">
-          <div className="flex items-center mb-10">
-            <img src="/logo.png" alt="ProjectBridge Logo" className="h-20 w-auto object-contain drop-shadow-2xl" style={{ filter: 'brightness(0) invert(1)' }} />
-          </div>
-          <h1 className="text-5xl font-display font-black mb-6 leading-[1.1] tracking-tight">
-            Email Verification
-          </h1>
-          <p className="text-lg text-white/80 mb-10 leading-relaxed font-light">
-            Verifying your email is a quick one-time security step to protect your identity and secure project bidding operations.
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen flex bg-[var(--bg)] transition-colors duration-300">
+      {/* Left Panel - Dynamic Visual Showcase */}
+      <AuthVisualShowcase />
 
-      {/* Right Panel - Content */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
+      {/* Right Panel - Form / Content */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto min-h-screen">
         <BackgroundAnimation />
+        
+        {/* Mobile-only ambient background glows */}
         <div className="lg:hidden absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -left-40 w-80 h-80 bg-brand-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-          <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-violet-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+          <div className="absolute -top-40 -left-40 w-80 h-80 bg-brand-500/20 rounded-full filter blur-3xl" />
+          <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-violet-600/20 rounded-full filter blur-3xl" />
         </div>
 
-        <div className="w-full max-w-[420px] relative z-10 animate-slide-up">
+        {/* Card (Glassmorphic) */}
+        <div className="w-full max-w-[440px] relative z-10 animate-slide-up glassmorphic-card p-8 sm:p-10 rounded-3xl border border-white/20 dark:border-white/5">
+          
           {status === 'verifying' && (
-            <div className="text-center py-10">
-              <div className="w-16 h-16 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin mx-auto mb-6"></div>
+            <div className="text-center py-10 animate-fade-in">
+              <div className="w-16 h-16 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin mx-auto mb-6 shadow-[0_0_15px_rgba(59,130,246,0.25)]"></div>
               <h2 className="font-display text-2xl font-black text-[var(--text)] mb-3">Verifying Email...</h2>
-              <p className="text-[var(--text-muted)] text-base">Please wait while we secure your account details.</p>
+              <p className="text-[var(--text-muted)] text-sm">Please wait while we secure your account details.</p>
             </div>
           )}
 
           {status === 'success' && (
-            <div className="text-center">
-              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/25 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 size={32} />
+            <div className="text-center py-4 animate-slide-up">
+              {/* Drawing Circle Checkmark with Float Animation */}
+              <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(16,185,129,0.25)] animate-float">
+                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                  <path className="animate-stroke-check" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
               </div>
-              <h2 className="font-display text-3xl font-black text-[var(--text)] mb-4">Email Verified!</h2>
-              <p className="text-[var(--text-muted)] text-base mb-8 leading-relaxed font-light">
+              
+              <h2 className="font-display text-3xl font-black text-[var(--text)] tracking-tight mb-3">Email Verified!</h2>
+              
+              <p className="text-[var(--text-muted)] text-sm mb-8 leading-relaxed font-light">
                 Your email address has been successfully verified. Your ProjectBridge account is now fully active.
               </p>
+              
               <Link
                 to="/login"
-                className="inline-flex w-full py-4 bg-gradient-to-r from-brand-500 to-violet-600 hover:from-brand-600 hover:to-violet-700 text-white rounded-xl font-bold text-base shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 justify-center transition-all transform active:scale-[0.98]"
+                className="inline-flex w-full py-4 bg-gradient-to-r from-brand-500 via-indigo-600 to-violet-600 hover:from-brand-600 hover:to-violet-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 justify-center transition-all transform active:scale-[0.98] animate-gradient-bg"
               >
                 Sign In to Account
               </Link>
@@ -115,56 +113,78 @@ export default function VerifyEmail() {
           )}
 
           {status === 'error' && (
-            <div>
-              <div className="mb-8 text-center sm:text-left">
-                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl flex items-center justify-center mb-4 mx-auto sm:mx-0">
-                  <ShieldAlert size={24} />
+            <div className="animate-fade-in">
+              <div className="mb-6 text-center sm:text-left">
+                <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center mb-4 mx-auto sm:mx-0 shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-float">
+                  <ShieldAlert size={22} />
                 </div>
-                <h2 className="font-display text-3xl font-black text-[var(--text)] mb-3">Verification Failed</h2>
-                <p className="text-[var(--text-muted)] text-base">{errorMsg}</p>
+                <h2 className="font-display text-3xl font-black text-[var(--text)] tracking-tight mb-2">Verification Failed</h2>
+                <p className="text-[var(--text-muted)] text-xs leading-relaxed">{errorMsg}</p>
               </div>
 
               {!resendSuccess ? (
                 <form onSubmit={handleResend} className="space-y-5">
-                  <p className="text-sm text-[var(--text-muted)] leading-relaxed">
-                    If your activation link has expired, you can request a new one by entering your registered email below:
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed font-light">
+                    If your activation link has expired, you can request a new one by entering your registered email address below:
                   </p>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold text-[var(--text)] ml-1">Email Address</label>
+                  
+                  {/* Email Input with Floating Label */}
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none z-10">
+                      <Mail size={18} />
+                    </div>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-4 py-3.5 bg-[var(--bg-secondary)] border-2 border-transparent focus:border-brand-500 rounded-xl outline-none text-[var(--text)] transition-all shadow-sm focus:shadow-md"
-                      placeholder="you@university.edu"
+                      placeholder=" "
+                      id="verify-resend-email"
+                      className="peer w-full pl-11 pr-4 pt-5 pb-2 bg-[var(--bg-secondary)] border border-[var(--border)] rounded-xl outline-none text-[var(--text)] transition-all input-glow-focus text-sm"
                       required
                     />
+                    <label 
+                      htmlFor="verify-resend-email"
+                      className="absolute left-11 top-3.5 text-sm text-[var(--text-muted)] pointer-events-none transition-all duration-200 origin-[0] transform -translate-y-2.5 scale-75 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-2.5 peer-focus:scale-75 peer-focus:text-brand-500"
+                    >
+                      Email Address
+                    </label>
                   </div>
+
+                  {/* Resend button */}
                   <button
                     type="submit"
                     disabled={resendLoading}
-                    className="w-full py-4 bg-gradient-to-r from-brand-500 to-violet-600 hover:from-brand-600 hover:to-violet-700 text-white rounded-xl font-bold text-base shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 transition-all flex items-center justify-center gap-2 transform active:scale-[0.98]"
+                    className="w-full py-4 bg-gradient-to-r from-brand-500 via-indigo-600 to-violet-600 hover:from-brand-600 hover:to-violet-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 transition-all flex items-center justify-center gap-2 transform active:scale-[0.98] animate-gradient-bg"
                   >
                     {resendLoading ? (
-                      <><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending Link...</>
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 
+                        Sending Link...
+                      </>
                     ) : (
-                      <><Mail size={20} /> Send Verification Link</>
+                      <>
+                        <Mail size={18} /> 
+                        Send Verification Link
+                      </>
                     )}
                   </button>
                 </form>
               ) : (
-                <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/50 rounded-xl p-5 text-sm text-emerald-800 dark:text-emerald-400 flex items-start gap-3 animate-fade-in shadow-sm">
-                  <div className="mt-0.5"><Sparkles size={18} /></div>
+                /* Success send notification banner */
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-xs text-emerald-800 dark:text-emerald-400 flex items-start gap-3 animate-fade-in shadow-sm">
+                  <div className="mt-0.5 text-emerald-500 shrink-0"><Sparkles size={16} /></div>
                   <div>
-                    <p className="font-semibold mb-1">Link Sent Successfully!</p>
-                    <p className="leading-relaxed font-light">We have sent a new activation link to <strong>{email}</strong>. Please check your inbox.</p>
+                    <p className="font-bold mb-1">Link Sent Successfully!</p>
+                    <p className="leading-relaxed font-light">
+                      We have sent a new activation link to <strong className="font-semibold text-emerald-950 dark:text-emerald-100">{email}</strong>. Please check your inbox.
+                    </p>
                   </div>
                 </div>
               )}
 
-              <div className="mt-10 pt-6 border-t border-[var(--border)] text-center sm:text-left">
-                <Link to="/login" className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-brand-500 transition-colors text-sm font-medium">
-                  <ArrowLeft size={16} /> Back to Login
+              <div className="mt-8 pt-6 border-t border-[var(--border)] text-center sm:text-left">
+                <Link to="/login" className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-brand-500 transition-colors text-sm font-semibold group">
+                  <ArrowLeft size={16} className="transform group-hover:-translate-x-1 transition-transform" /> Back to Login
                 </Link>
               </div>
             </div>
