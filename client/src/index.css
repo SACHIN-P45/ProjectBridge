@@ -282,3 +282,60 @@
 .animate-float-slow-2 {
   animation: floatSlow2 15s ease-in-out infinite;
 }
+
+/* Glassmorphism Styles */
+.glassmorphic-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+}
+.dark .glassmorphic-card {
+  background: rgba(26, 29, 39, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Glowing Border Focus Inputs */
+.input-glow-focus {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.input-glow-focus:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15), 0 0 15px rgba(99, 102, 241, 0.35);
+}
+
+/* Animated Gradient Keyframes */
+@keyframes gradientbg {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-bg {
+  background-size: 200% 200%;
+  animation: gradientbg 6s ease infinite;
+}
+
+/* Checkmark Stroke Drawing Animation */
+@keyframes strokeCheck {
+  0% { stroke-dashoffset: 100; }
+  100% { stroke-dashoffset: 0; }
+}
+.animate-stroke-check {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: strokeCheck 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Envelope Letter Bounce */
+@keyframes letterBounce {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.animate-letter-bounce {
+  animation: letterBounce 2s ease-in-out infinite;
+}
+
