@@ -37,6 +37,13 @@ export const deleteUser = createAsyncThunk('admin/deleteUser', async (userId, { 
   } catch (err) { return rejectWithValue(err.response?.data?.message); }
 });
 
+export const updateDeveloper = createAsyncThunk('admin/updateDeveloper', async ({ id, data }, { rejectWithValue }) => {
+  try {
+    const res = await api.put(`/admin/developers/${id}`, data);
+    return res.data;
+  } catch (err) { return rejectWithValue(err.response?.data?.message); }
+});
+
 export const fetchAllProjects = createAsyncThunk('admin/fetchProjects', async (_, { rejectWithValue }) => {
   try {
     const res = await api.get('/admin/projects');
@@ -124,6 +131,12 @@ const adminSlice = createSlice({
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.users = state.users.filter(u => u._id !== action.payload);
+      })
+      .addCase(updateDeveloper.fulfilled, (state, action) => {
+        const index = state.users.findIndex(u => u._id === action.payload._id);
+        if (index !== -1) {
+          state.users[index] = { ...state.users[index], ...action.payload };
+        }
       })
 
       // Projects

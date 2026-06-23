@@ -71,7 +71,7 @@ export default function ResetPassword() {
         </div>
 
         {/* Form Card (Glassmorphic) */}
-        <div className="w-full max-w-[440px] relative z-10 animate-slide-up glassmorphic-card p-8 sm:p-10 rounded-3xl border border-white/20 dark:border-white/5">
+        <div className="w-full max-w-[480px] relative z-10 animate-slide-up glassmorphic-card p-8 sm:p-10 rounded-3xl border border-white/20 dark:border-white/5">
           
           <div className="mb-8">
             <div className="w-12 h-12 bg-brand-500/10 dark:bg-brand-900/20 text-brand-500 dark:text-brand-400 rounded-xl flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(59,130,246,0.15)] animate-float">

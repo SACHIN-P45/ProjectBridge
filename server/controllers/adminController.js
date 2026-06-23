@@ -87,6 +87,7 @@ const createDeveloper = asyncHandler(async (req, res) => {
     role: 'developer',
     isVerified: false,
     isActive: true,
+    mustChangePassword: true,
     emailVerificationToken,
     emailVerificationExpire
   });
@@ -162,6 +163,78 @@ const deleteUser = asyncHandler(async (req, res) => {
 
   await User.findByIdAndDelete(req.params.id);
   res.json({ message: 'User removed' });
+});
+
+// @desc Update developer details (name, email)
+// @route PUT /api/admin/developers/:id
+const updateDeveloper = asyncHandler(async (req, res) => {
+  const { name, email } = req.body;
+  const user = await User.findById(req.params.id);
+  if (!user || user.role !== 'developer') {
+    res.status(404);
+    throw new Error('Developer not found');
+  }
+
+  if (email && email.toLowerCase() !== user.email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      res.status(400);
+      throw new Error('Please provide a valid email address');
+    }
+    const emailExists = await User.findOne({ email: email.toLowerCase() });
+    if (emailExists) {
+      res.status(400);
+      throw new Error('Email is already in use');
+    }
+    user.email = email.toLowerCase();
+    user.isVerified = false;
+  }
+
+  if (name) user.name = name;
+  const updated = await user.save();
+
+  res.json({
+    _id: updated._id,
+    name: updated.name,
+    email: updated.email,
+    role: updated.role,
+    isActive: updated.isActive,
+    isVerified: updated.isVerified,
+    mustChangePassword: updated.mustChangePassword,
+  });
+});
+
+// @desc Developer sets password after email verification (first login)
+// @route POST /api/admin/developers/set-password
+const developerSetPassword = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    res.status(400);
+    throw new Error('Email and new password are required');
+  }
+
+  if (password.length < 6) {
+    res.status(400);
+    throw new Error('Password must be at least 6 characters long');
+  }
+
+  const user = await User.findOne({ email: email.trim().toLowerCase(), role: 'developer' });
+  if (!user) {
+    res.status(404);
+    throw new Error('Developer account not found');
+  }
+
+  if (!user.isVerified) {
+    res.status(400);
+    throw new Error('Please verify your email first before setting a password');
+  }
+
+  user.password = password;
+  user.mustChangePassword = false;
+  await user.save();
+
+  res.status(200).json({ success: true, message: 'Password set successfully. You can now log in.' });
 });
 
 // @desc Get all projects
@@ -246,6 +319,8 @@ module.exports = {
   getDashboardStats,
   getAllUsers,
   createDeveloper,
+  updateDeveloper,
+  developerSetPassword,
   updateUserStatus,
   deleteUser,
   getAllProjects,

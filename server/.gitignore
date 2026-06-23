@@ -1,0 +1,28 @@
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
+
+# ── Environment Variables ──────────────────────────────────────
+.env
+.env.*
+
+# ── Security: token / preview files ───────────────────────────
+*.txt
+reset-token.txt
+verify-token.txt
+email-preview.html
+
+# ── User Uploads ──────────────────────────────────────────────
+uploads/*
+!uploads/.gitkeep
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Test / Temp scripts ───────────────────────────────────────
+test-*.js
+check-*.js
+
+# ── OS ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

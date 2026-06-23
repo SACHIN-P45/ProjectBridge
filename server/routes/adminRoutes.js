@@ -6,6 +6,8 @@ const {
   getDashboardStats,
   getAllUsers,
   createDeveloper,
+  updateDeveloper,
+  developerSetPassword,
   updateUserStatus,
   deleteUser,
   getAllProjects,
@@ -16,6 +18,10 @@ const {
   sendGlobalNotification
 } = require('../controllers/adminController');
 
+// Public route - developer sets their own password after email verification
+router.post('/developers/set-password', developerSetPassword);
+
+// All routes below require admin auth
 router.use(protect, roleCheck('admin'));
 
 router.get('/stats', getDashboardStats);
@@ -28,6 +34,7 @@ router.route('/users/:id')
 
 router.put('/users/:id/status', updateUserStatus);
 router.post('/developers', createDeveloper);
+router.put('/developers/:id', updateDeveloper);
 
 router.route('/projects')
   .get(getAllProjects);

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchAllUsers, updateUserStatus, deleteUser, createDeveloper } from '../../store/slices/adminSlice';
+import { fetchAllUsers, updateUserStatus, deleteUser, createDeveloper, updateDeveloper } from '../../store/slices/adminSlice';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { 
   Search, Plus, ShieldAlert, CheckCircle, XCircle, Trash2, 
-  Users, Code2, UserX, Calendar, Mail, UserCheck, X
+  Users, Code2, UserX, Calendar, Mail, UserCheck, X, Pencil,
+  KeyRound, Save
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -18,6 +19,11 @@ export default function AdminUsers() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [devForm, setDevForm] = useState({ name: '', email: '', password: '' });
   const [creatingDev, setCreatingDev] = useState(false);
+
+  // Edit developer state
+  const [editingDev, setEditingDev] = useState(null); // the user object being edited
+  const [editForm, setEditForm] = useState({ name: '', email: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllUsers());
@@ -55,12 +61,30 @@ export default function AdminUsers() {
     const res = await dispatch(createDeveloper(devForm));
     setCreatingDev(false);
     if (res.meta.requestStatus === 'fulfilled') {
-      toast.success('Developer created successfully! Account is active and verified.');
+      toast.success('Developer created! A verification email has been sent.');
       setShowCreateModal(false);
       setDevForm({ name: '', email: '', password: '' });
       setActiveTab('developer');
     } else {
       toast.error(res.payload || 'Failed to create developer');
+    }
+  };
+
+  const openEditModal = (dev) => {
+    setEditingDev(dev);
+    setEditForm({ name: dev.name, email: dev.email });
+  };
+
+  const handleEditDeveloper = async (e) => {
+    e.preventDefault();
+    setSavingEdit(true);
+    const res = await dispatch(updateDeveloper({ id: editingDev._id, data: editForm }));
+    setSavingEdit(false);
+    if (res.meta.requestStatus === 'fulfilled') {
+      toast.success('Developer details updated successfully!');
+      setEditingDev(null);
+    } else {
+      toast.error(res.payload || 'Failed to update developer');
     }
   };
 
@@ -167,13 +191,16 @@ export default function AdminUsers() {
                 <th className="p-4 font-semibold">Joined Date</th>
                 <th className="p-4 font-semibold">Verification</th>
                 <th className="p-4 font-semibold">Status</th>
+                {activeTab === 'developer' && (
+                  <th className="p-4 font-semibold">Pwd Status</th>
+                )}
                 <th className="p-4 font-semibold text-right pr-6">Operations</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)] text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-[var(--text-muted)]">
+                  <td colSpan={activeTab === 'developer' ? 6 : 5} className="p-12 text-center text-[var(--text-muted)]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="w-6 h-6 border-2 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
                       <span>Loading records...</span>
@@ -182,7 +209,7 @@ export default function AdminUsers() {
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-[var(--text-muted)]">
+                  <td colSpan={activeTab === 'developer' ? 6 : 5} className="p-12 text-center text-[var(--text-muted)]">
                     No {activeTab} accounts match your query.
                   </td>
                 </tr>
@@ -250,9 +277,34 @@ export default function AdminUsers() {
                       )}
                     </td>
 
+                    {/* Password Status - Only for developers */}
+                    {activeTab === 'developer' && (
+                      <td className="p-4">
+                        {u.mustChangePassword ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-orange-600 bg-orange-50 dark:bg-orange-950/20 border border-orange-500/10">
+                            <KeyRound size={12} /> Awaiting Setup
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-sky-600 bg-sky-50 dark:bg-sky-950/20 border border-sky-500/10">
+                            <CheckCircle size={12} /> Password Set
+                          </span>
+                        )}
+                      </td>
+                    )}
+
                     {/* Operations */}
                     <td className="p-4 text-right pr-6">
                       <div className="flex items-center justify-end gap-1.5 opacity-100">
+                        {/* Edit button - ONLY for developers */}
+                        {u.role === 'developer' && (
+                          <button
+                            onClick={() => openEditModal(u)}
+                            className="p-2 rounded-xl border text-violet-500 border-violet-200 hover:bg-violet-500 hover:text-white dark:border-violet-900/30 dark:hover:bg-violet-900/30 transition-all"
+                            title="Edit Developer"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleToggleStatus(u._id, u.isActive !== false)}
                           className={`p-2 rounded-xl border transition-all ${
@@ -286,10 +338,10 @@ export default function AdminUsers() {
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-[var(--card)] w-full max-w-md rounded-3xl shadow-2xl border border-[var(--border)] overflow-hidden animate-slide-up">
-            <div className="p-6 border-b border-[var(--border)] flex justify-between items-center bg-[var(--bg-secondary)]">
+            <div className="p-6 border-b border-[var(--border)] flex justify-between items-center bg-gradient-to-r from-violet-500/10 to-indigo-500/10">
               <div>
                 <h2 className="text-xl font-display font-black text-[var(--text)]">Create Developer</h2>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">Account will be immediately verified and active.</p>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">A verification email will be sent. Developer must verify then set their own password.</p>
               </div>
               <button 
                 onClick={() => setShowCreateModal(false)}
@@ -297,6 +349,25 @@ export default function AdminUsers() {
               >
                 <X size={18} />
               </button>
+            </div>
+            {/* Step indicators */}
+            <div className="px-6 pt-5 pb-1">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="w-7 h-7 rounded-full bg-violet-500 text-white text-xs font-bold flex items-center justify-center shadow-lg shadow-violet-500/30">1</div>
+                  <span className="text-xs font-semibold text-[var(--text)]">Admin Creates Account</span>
+                </div>
+                <div className="w-8 h-px bg-[var(--border)]" />
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="w-7 h-7 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-muted)] text-xs font-bold flex items-center justify-center">2</div>
+                  <span className="text-xs text-[var(--text-muted)]">Developer Verifies Email</span>
+                </div>
+                <div className="w-8 h-px bg-[var(--border)]" />
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="w-7 h-7 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-muted)] text-xs font-bold flex items-center justify-center">3</div>
+                  <span className="text-xs text-[var(--text-muted)]">Sets Own Password</span>
+                </div>
+              </div>
             </div>
             <form onSubmit={handleCreateDeveloper} className="p-6 space-y-4">
               <div>
@@ -322,7 +393,7 @@ export default function AdminUsers() {
                 />
               </div>
               <div>
-                <label className="input-label">Password</label>
+                <label className="input-label">Temporary Password <span className="text-[var(--text-muted)] font-normal">(developer will change this)</span></label>
                 <input 
                   required 
                   minLength={6} 
@@ -346,7 +417,100 @@ export default function AdminUsers() {
                   disabled={creatingDev}
                   className="btn-primary flex-1 justify-center bg-violet-500 hover:bg-violet-600 border-violet-500 hover:border-violet-600 shadow-glow-violet disabled:opacity-50"
                 >
-                  {creatingDev ? 'Creating...' : 'Create Account'}
+                  {creatingDev ? 'Creating...' : 'Create & Send Email'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT DEVELOPER MODAL */}
+      {editingDev && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--card)] w-full max-w-md rounded-3xl shadow-2xl border border-[var(--border)] overflow-hidden animate-slide-up">
+            <div className="p-6 border-b border-[var(--border)] flex justify-between items-center bg-gradient-to-r from-violet-500/10 to-indigo-500/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-violet-500/30">
+                  {editingDev.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-xl font-display font-black text-[var(--text)]">Edit Developer</h2>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">Update name or email address.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingDev(null)}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--border)] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleEditDeveloper} className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Full Name</label>
+                <input 
+                  required 
+                  type="text" 
+                  className="input" 
+                  placeholder="Full name"
+                  value={editForm.name} 
+                  onChange={e => setEditForm({...editForm, name: e.target.value})} 
+                />
+              </div>
+              <div>
+                <label className="input-label">Email Address</label>
+                <input 
+                  required 
+                  type="email" 
+                  className="input" 
+                  placeholder="email@example.com"
+                  value={editForm.email} 
+                  onChange={e => setEditForm({...editForm, email: e.target.value})} 
+                />
+                {editForm.email.toLowerCase() !== editingDev.email && (
+                  <p className="text-xs text-amber-500 mt-1.5 flex items-center gap-1">
+                    <ShieldAlert size={12} /> Changing email will require re-verification.
+                  </p>
+                )}
+              </div>
+
+              {/* Current status info */}
+              <div className="bg-[var(--bg-secondary)] rounded-xl p-3 border border-[var(--border)] space-y-2">
+                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Account Status</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    editingDev.isVerified 
+                      ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-500/10' 
+                      : 'text-amber-600 bg-amber-50 dark:bg-amber-950/20 border border-amber-500/10'
+                  }`}>
+                    {editingDev.isVerified ? <><UserCheck size={11}/> Verified</> : <><ShieldAlert size={11}/> Not Verified</>}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    editingDev.mustChangePassword 
+                      ? 'text-orange-600 bg-orange-50 dark:bg-orange-950/20 border border-orange-500/10' 
+                      : 'text-sky-600 bg-sky-50 dark:bg-sky-950/20 border border-sky-500/10'
+                  }`}>
+                    {editingDev.mustChangePassword ? <><KeyRound size={11}/> Password Not Set</> : <><CheckCircle size={11}/> Password Set</>}
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingDev(null)} 
+                  className="btn-secondary flex-1 justify-center"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={savingEdit}
+                  className="btn-primary flex-1 justify-center bg-violet-500 hover:bg-violet-600 border-violet-500 hover:border-violet-600 shadow-glow-violet disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Save size={16} />
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

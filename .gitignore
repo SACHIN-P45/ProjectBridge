@@ -1,35 +1,38 @@
-# Dependency directories
+# ── Dependencies ──────────────────────────────────────────────
 node_modules/
-**/node_modules/
 
-# Production builds
-dist/
-client/dist/
-
-# Environments and Secrets
+# ── Environment Variables (NEVER commit these) ─────────────────
 .env
-server/.env
-*.env
-*.env.local
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.test
 
-# IDEs and Editors
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# ── Security: token files written to disk ─────────────────────
+*.txt
+reset-token.txt
+verify-token.txt
+email-preview.html
 
-# OS metadata
+# ── Uploads (user content, not code) ──────────────────────────
+uploads/
+!uploads/.gitkeep
+
+# ── Build outputs ─────────────────────────────────────────────
+dist/
+build/
+
+# ── OS / Editor artifacts ─────────────────────────────────────
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Uploads and temporary files
-server/uploads/*
-!server/uploads/avatars/
-!server/uploads/chat-files/
-server/uploads/avatars/*
-server/uploads/chat-files/*
-server/verify-token.txt
-server/reset-token.txt
+# ── Test / Temp files ─────────────────────────────────────────
+test-*.js
+check-*.js
