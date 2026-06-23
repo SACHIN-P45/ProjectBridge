@@ -8,6 +8,7 @@ import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import VerifyEmail from './pages/auth/VerifyEmail';
+import DeveloperSetPassword from './pages/auth/DeveloperSetPassword';
 
 
 // Student
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/forgot-password" element={<GuestRoute><ForgotPassword /></GuestRoute>} />
         <Route path="/reset-password/:token" element={<GuestRoute><ResetPassword /></GuestRoute>} />
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/developer/set-password" element={<DeveloperSetPassword />} />
 
         {/* Student */}
         <Route path="/student/dashboard" element={<ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>} />

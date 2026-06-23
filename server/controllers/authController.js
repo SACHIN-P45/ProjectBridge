@@ -64,7 +64,7 @@ const register = asyncHandler(async (req, res) => {
   try {
     fs.writeFileSync(path.join(__dirname, '..', 'verify-token.txt'), verifyUrl);
   } catch (err) {
-    console.error('Failed to write verify-token.txt:', err);
+    console.error('Failed to write verify-token.txt on registration:', err);
   }
 
   // Send the verification email using a beautiful HTML template
@@ -135,12 +135,13 @@ const login = asyncHandler(async (req, res) => {
 
     const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
 
+    // Write token URL to file for developer testing ease
     const fs = require('fs');
     const path = require('path');
     try {
       fs.writeFileSync(path.join(__dirname, '..', 'verify-token.txt'), verifyUrl);
     } catch (err) {
-      console.error('Failed to write verify-token.txt:', err);
+      console.error('Failed to write verify-token.txt on login token regeneration:', err);
     }
 
     const textMessage = `Please verify your email address to activate your ProjectBridge account. Link: ${verifyUrl}`;
@@ -166,6 +167,15 @@ const login = asyncHandler(async (req, res) => {
     } catch (err) {
       console.error('Failed to send verification email on login:', err);
     }
+
+    res.status(401);
+    throw new Error('Please verify your email address to activate your account.');
+  }
+
+  // If developer has a temporary password and must set a personal password
+  if (user.role === 'developer' && user.mustChangePassword) {
+    res.status(400);
+    throw new Error('first_login_password_change_required');
   }
 
   res.json({
@@ -290,15 +300,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
   // Create reset url
   const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
 
-  // Write reset URL to a file for developer testing ease
-  const fs = require('fs');
-  const path = require('path');
-  try {
-    fs.writeFileSync(path.join(__dirname, '..', 'reset-token.txt'), resetUrl);
-  } catch (err) {
-    console.error('Failed to write reset-token.txt:', err);
-  }
-
   const message = `You are receiving this email because you (or someone else) have requested the reset of a password. Please click on the link below or paste it into your browser to complete the process:\n\n${resetUrl}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.`;
 
   try {
@@ -367,18 +368,6 @@ const resetPassword = asyncHandler(async (req, res) => {
   user.resetPasswordExpire = undefined;
   await user.save();
 
-  // Clean up reset-token.txt if it exists
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const tokenFile = path.join(__dirname, '..', 'reset-token.txt');
-    if (fs.existsSync(tokenFile)) {
-      fs.unlinkSync(tokenFile);
-    }
-  } catch (err) {
-    // Ignore errors on deletion
-  }
-
   res.status(200).json({
     success: true,
     message: 'Password reset successful',
@@ -411,6 +400,9 @@ const verifyEmail = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Email verified successfully! You can now log in.',
+    role: user.role,
+    email: user.email,
+    mustChangePassword: user.mustChangePassword || false,
   });
 });
 
@@ -456,7 +448,7 @@ const resendVerification = asyncHandler(async (req, res) => {
   try {
     fs.writeFileSync(path.join(__dirname, '..', 'verify-token.txt'), verifyUrl);
   } catch (err) {
-    console.error('Failed to write verify-token.txt:', err);
+    console.error('Failed to write verify-token.txt on resend:', err);
   }
 
   // Send the verification email using a beautiful HTML template

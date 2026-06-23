@@ -30,13 +30,20 @@ export default function Login() {
 
   useEffect(() => {
     if (error) { 
+      if (error === 'first_login_password_change_required') {
+        toast.error('First-time login: Please set your password first.');
+        navigate('/developer/set-password', { state: { email: form.email } });
+        dispatch(clearError());
+        return;
+      }
+      
       toast.error(error); 
       if (error.toLowerCase().includes('verify')) {
         setShowResend(true);
       }
       dispatch(clearError()); 
     }
-  }, [error, dispatch]);
+  }, [error, dispatch, navigate, form.email]);
 
   const handleResendVerification = async () => {
     if (!form.email) return toast.error('Please enter your email address first');
@@ -90,7 +97,7 @@ export default function Login() {
         </div>
 
         {/* Form Container (Glassmorphic) */}
-        <div className="w-full max-w-[440px] relative z-10 animate-slide-up glassmorphic-card p-8 sm:p-10 rounded-3xl border border-white/20 dark:border-white/5">
+        <div className="w-full max-w-[480px] relative z-10 animate-slide-up glassmorphic-card p-8 sm:p-10 rounded-3xl border border-white/20 dark:border-white/5">
           <Link to="/" className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-brand-500 transition-colors mb-8 text-sm font-semibold group">
             <ArrowLeft size={16} className="transform group-hover:-translate-x-1 transition-transform" /> Back to Homepage
           </Link>

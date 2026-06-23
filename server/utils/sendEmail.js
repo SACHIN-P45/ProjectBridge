@@ -15,17 +15,6 @@ const sendEmail = async (options) => {
     console.log(`Subject: ${options.subject}`);
     console.log(`Message:\n${options.text}`);
     console.log('==================================================\n');
-    
-    if (options.html) {
-      try {
-        const fs = require('fs');
-        const path = require('path');
-        fs.writeFileSync(path.join(__dirname, '..', 'email-preview.html'), options.html);
-        console.log(`📝 Local HTML preview saved to server/email-preview.html`);
-      } catch (err) {
-        console.error('Failed to write email-preview.html:', err);
-      }
-    }
     return;
   }
 
@@ -41,10 +30,9 @@ const sendEmail = async (options) => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    // For Gmail we might need this to avoid self-signed certificate errors:
     tls: {
-      rejectUnauthorized: false
-    }
+      rejectUnauthorized: false,
+    },
   });
 
   const mailOptions = {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { CheckCircle2, ShieldAlert, ArrowLeft, Mail, Sparkles } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { CheckCircle2, ShieldAlert, ArrowLeft, Mail, Sparkles, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser } from '../../store/slices/authSlice';
@@ -10,8 +10,10 @@ import api from '../../api/axios';
 
 export default function VerifyEmail() {
   const { token } = useParams();
-  const [status, setStatus] = useState('verifying'); // 'verifying', 'success', 'error'
+  const navigate = useNavigate();
+  const [status, setStatus] = useState('verifying'); // 'verifying', 'success', 'developer-set-password', 'error'
   const [errorMsg, setErrorMsg] = useState('');
+  const [verifiedEmail, setVerifiedEmail] = useState('');
   const [email, setEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
@@ -27,7 +29,13 @@ export default function VerifyEmail() {
       if (user) {
         dispatch(setUser({ ...user, isVerified: true }));
       }
-      setStatus('success');
+      // Developer first-login flow: redirect to set-password page
+      if (res.data?.role === 'developer' && res.data?.mustChangePassword) {
+        setVerifiedEmail(res.data.email || '');
+        setStatus('developer-set-password');
+      } else {
+        setStatus('success');
+      }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'The verification link is invalid or has expired.');
       setStatus('error');
@@ -78,13 +86,60 @@ export default function VerifyEmail() {
         </div>
 
         {/* Card (Glassmorphic) */}
-        <div className="w-full max-w-[440px] relative z-10 animate-slide-up glassmorphic-card p-8 sm:p-10 rounded-3xl border border-white/20 dark:border-white/5">
+        <div className="w-full max-w-[480px] relative z-10 animate-slide-up glassmorphic-card p-8 sm:p-10 rounded-3xl border border-white/20 dark:border-white/5">
           
           {status === 'verifying' && (
             <div className="text-center py-10 animate-fade-in">
               <div className="w-16 h-16 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin mx-auto mb-6 shadow-[0_0_15px_rgba(59,130,246,0.25)]"></div>
               <h2 className="font-display text-2xl font-black text-[var(--text)] mb-3">Verifying Email...</h2>
               <p className="text-[var(--text-muted)] text-sm">Please wait while we secure your account details.</p>
+            </div>
+          )}
+
+          {/* Developer first-login: email verified, now set password */}
+          {status === 'developer-set-password' && (
+            <div className="text-center py-4 animate-slide-up">
+              <div className="w-20 h-20 bg-violet-500/10 text-violet-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(139,92,246,0.25)] animate-float">
+                <KeyRound size={36} />
+              </div>
+              <h2 className="font-display text-3xl font-black text-[var(--text)] tracking-tight mb-3">
+                Email Verified! ✅
+              </h2>
+              <p className="text-[var(--text-muted)] text-sm mb-2 leading-relaxed">
+                Great — your email is confirmed. One last step:
+              </p>
+              <p className="text-[var(--text)] text-sm font-semibold mb-8">
+                Set your own personal password to activate your developer account.
+              </p>
+              {/* Step progress pill */}
+              <div className="flex items-center justify-center gap-3 mb-8">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <CheckCircle2 size={13} />
+                  </div>
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Verified</span>
+                </div>
+                <div className="flex-1 max-w-[60px] h-0.5 bg-gradient-to-r from-emerald-500 to-violet-500 rounded-full" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-violet-500/30">
+                    <span className="text-xs font-black">2</span>
+                  </div>
+                  <span className="text-xs font-semibold text-violet-600 dark:text-violet-400">Set Password</span>
+                </div>
+                <div className="flex-1 max-w-[60px] h-0.5 bg-[var(--border)] rounded-full" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 rounded-full bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-muted)] flex items-center justify-center">
+                    <span className="text-xs font-bold">3</span>
+                  </div>
+                  <span className="text-xs text-[var(--text-muted)]">Login</span>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/developer/set-password', { state: { email: verifiedEmail } })}
+                className="inline-flex w-full py-4 bg-gradient-to-r from-violet-500 via-indigo-600 to-brand-500 hover:from-violet-600 hover:to-brand-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 justify-center items-center gap-2 transition-all transform active:scale-[0.98] animate-gradient-bg"
+              >
+                <KeyRound size={18} /> Set My Password
+              </button>
             </div>
           )}
 
@@ -111,6 +166,7 @@ export default function VerifyEmail() {
               </Link>
             </div>
           )}
+
 
           {status === 'error' && (
             <div className="animate-fade-in">

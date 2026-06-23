@@ -17,9 +17,16 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('pb_token');
-      localStorage.removeItem('pb_user');
-      window.location.href = '/login';
+      const isAuthRoute = err.config?.url && (
+        err.config.url.includes('/auth/login') ||
+        err.config.url.includes('/auth/register') ||
+        err.config.url.includes('/auth/verify-email')
+      );
+      if (!isAuthRoute) {
+        localStorage.removeItem('pb_token');
+        localStorage.removeItem('pb_user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   }

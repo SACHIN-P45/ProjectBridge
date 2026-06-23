@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema(
     notifications: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Notification' }],
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
+    mustChangePassword: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
