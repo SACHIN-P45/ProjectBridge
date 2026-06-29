@@ -1,11 +1,11 @@
 const asyncHandler = require('express-async-handler');
 const crypto = require('crypto');
-const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const { supabase } = require('../config/db');
 const generateToken = require('../utils/generateToken');
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
 const sendEmail = require('../utils/sendEmail');
 const { getEmailTemplate } = require('../utils/emailTemplates');
-
 
 // @desc Register user
 // @route POST /api/auth/register
@@ -28,7 +28,14 @@ const register = asyncHandler(async (req, res) => {
     throw new Error('Password must be at least 6 characters');
   }
 
-  const userExists = await User.findOne({ email: email.toLowerCase() });
+  const { data: userExists, error: checkError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+
+  if (checkError) throw checkError;
+
   if (userExists) {
     res.status(400);
     throw new Error('User already exists');
@@ -44,17 +51,26 @@ const register = asyncHandler(async (req, res) => {
     .createHash('sha256')
     .update(verificationToken)
     .digest('hex');
-  const emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  const emailVerificationExpire = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
 
-  const user = await User.create({
-    name,
-    email: email.toLowerCase(),
-    password,
-    role: userRole,
-    isVerified: false,
-    emailVerificationToken,
-    emailVerificationExpire
-  });
+  // Hash password manually since we don't have mongoose pre-save hooks
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const { data: user, error: createError } = await supabase
+    .from('users')
+    .insert({
+      name,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role: userRole,
+      is_verified: false,
+      email_verification_token: emailVerificationToken,
+      email_verification_expire: emailVerificationExpire,
+    })
+    .select()
+    .single();
+
+  if (createError) throw createError;
 
   const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
 
@@ -78,7 +94,7 @@ const register = asyncHandler(async (req, res) => {
     icon: '✉️',
     securityNote: 'This verification link is valid for 24 hours. If you did not sign up for a ProjectBridge account, you can safely ignore this email.',
     securityNoteType: 'success',
-    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173'
+    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   });
 
   try {
@@ -109,29 +125,44 @@ const login = asyncHandler(async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const user = await User.findOne({ email: normalizedEmail });
-  if (!user || !(await user.matchPassword(password))) {
+  const { data: user, error: fetchError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+
+  // Helpful error if user registered via OAuth and has no password
+  if (user && user.auth_provider !== 'local') {
+    res.status(400);
+    throw new Error(
+      `This account was registered with ${user.auth_provider.charAt(0).toUpperCase() + user.auth_provider.slice(1)}. Please use the "Continue with ${user.auth_provider.charAt(0).toUpperCase() + user.auth_provider.slice(1)}" button to sign in.`
+    );
+  }
+
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     res.status(401);
     throw new Error('Invalid email or password');
   }
 
-  if (!user.isVerified) {
+  if (!user.is_verified) {
     const verificationToken = crypto.randomBytes(20).toString('hex');
     const hashedToken = crypto
       .createHash('sha256')
       .update(verificationToken)
       .digest('hex');
-    const tokenExpire = Date.now() + 24 * 60 * 60 * 1000;
+    const tokenExpire = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $set: {
-          emailVerificationToken: hashedToken,
-          emailVerificationExpire: tokenExpire
-        }
-      }
-    );
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        email_verification_token: hashedToken,
+        email_verification_expire: tokenExpire,
+      })
+      .eq('id', user.id);
+
+    if (updateError) throw updateError;
 
     const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
 
@@ -154,7 +185,7 @@ const login = asyncHandler(async (req, res) => {
       icon: '🔑',
       securityNote: 'This verification link is valid for 24 hours. If you did not request this email, please contact our support team.',
       securityNoteType: 'info',
-      clientUrl: process.env.CLIENT_URL || 'http://localhost:5173'
+      clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
     });
 
     try {
@@ -173,90 +204,119 @@ const login = asyncHandler(async (req, res) => {
   }
 
   // If developer has a temporary password and must set a personal password
-  if (user.role === 'developer' && user.mustChangePassword) {
+  if (user.role === 'developer' && user.must_change_password) {
     res.status(400);
     throw new Error('first_login_password_change_required');
   }
 
   res.json({
-    _id: user._id,
+    _id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
     avatar: user.avatar,
     bio: user.bio,
     skills: user.skills,
-    techStack: user.techStack,
-    githubUrl: user.githubUrl,
-    portfolioUrl: user.portfolioUrl,
+    techStack: user.tech_stack,
+    githubUrl: user.github_url,
+    portfolioUrl: user.portfolio_url,
     location: user.location,
     college: user.college,
     rating: user.rating,
-    totalReviews: user.totalReviews,
-    completedProjects: user.completedProjects,
-    totalEarnings: user.totalEarnings,
-    isVerified: user.isVerified,
-    token: generateToken(user._id),
+    totalReviews: user.total_reviews,
+    completedProjects: user.completed_projects,
+    totalEarnings: user.total_earnings,
+    isVerified: user.is_verified,
+    token: generateToken(user.id),
   });
 });
 
 // @desc Get current user
 // @route GET /api/auth/me
 const getMe = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select('-password');
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', req.user.id)
+    .single();
+
+  if (error) {
+    res.status(404);
+    throw new Error('User not found');
+  }
+
+  delete user.password;
+  user._id = user.id;
   res.json(user);
 });
 
 // @desc Update profile
 // @route PUT /api/auth/profile
 const updateProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
-
   const { name, bio, skills, techStack, githubUrl, portfolioUrl, location, college } = req.body;
 
-  if (name) user.name = name;
-  if (bio !== undefined) user.bio = bio;
-  if (skills) user.skills = typeof skills === 'string' ? JSON.parse(skills) : skills;
-  if (techStack) user.techStack = typeof techStack === 'string' ? JSON.parse(techStack) : techStack;
-  if (githubUrl !== undefined) user.githubUrl = githubUrl;
-  if (portfolioUrl !== undefined) user.portfolioUrl = portfolioUrl;
-  if (location !== undefined) user.location = location;
-  if (college !== undefined) user.college = college;
+  const updateData = {};
+  if (name) updateData.name = name;
+  if (bio !== undefined) updateData.bio = bio;
+  if (skills) updateData.skills = typeof skills === 'string' ? JSON.parse(skills) : skills;
+  if (techStack) updateData.tech_stack = typeof techStack === 'string' ? JSON.parse(techStack) : techStack;
+  if (githubUrl !== undefined) updateData.github_url = githubUrl;
+  if (portfolioUrl !== undefined) updateData.portfolio_url = portfolioUrl;
+  if (location !== undefined) updateData.location = location;
+  if (college !== undefined) updateData.college = college;
 
   if (req.file) {
     const result = await uploadToCloudinary(req.file.buffer, 'avatars', 'image', req.file.originalname);
-    user.avatar = result.secure_url;
+    updateData.avatar = result.secure_url;
   }
 
-  const updated = await user.save();
+  const { data: updated, error } = await supabase
+    .from('users')
+    .update(updateData)
+    .eq('id', req.user.id)
+    .select()
+    .single();
+
+  if (error) {
+    res.status(400);
+    throw error;
+  }
 
   res.json({
-    _id: updated._id,
+    _id: updated.id,
     name: updated.name,
     email: updated.email,
     role: updated.role,
     avatar: updated.avatar,
     bio: updated.bio,
     skills: updated.skills,
-    techStack: updated.techStack,
-    githubUrl: updated.githubUrl,
-    portfolioUrl: updated.portfolioUrl,
+    techStack: updated.tech_stack,
+    githubUrl: updated.github_url,
+    portfolioUrl: updated.portfolio_url,
     rating: updated.rating,
-    totalReviews: updated.totalReviews,
-    completedProjects: updated.completedProjects,
-    totalEarnings: updated.totalEarnings,
-    token: generateToken(updated._id),
+    totalReviews: updated.total_reviews,
+    completedProjects: updated.completed_projects,
+    totalEarnings: updated.total_earnings,
+    token: generateToken(updated.id),
   });
 });
 
 // @desc Get developer profile by id
 // @route GET /api/auth/developer/:id
 const getDeveloperProfile = asyncHandler(async (req, res) => {
-  const developer = await User.findById(req.params.id).select('-password').lean();
-  if (!developer || developer.role !== 'developer') {
+  const { data: developer, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', req.params.id)
+    .maybeSingle();
+
+  if (error || !developer || developer.role !== 'developer') {
     res.status(404);
     throw new Error('Developer not found');
   }
+
+  delete developer.password;
+  developer._id = developer.id;
   res.json(developer);
 });
 
@@ -276,7 +336,13 @@ const forgotPassword = asyncHandler(async (req, res) => {
     throw new Error('Please provide a valid email address');
   }
 
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const { data: user, error: fetchError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
 
   if (!user) {
     res.status(404);
@@ -287,15 +353,23 @@ const forgotPassword = asyncHandler(async (req, res) => {
   const resetToken = crypto.randomBytes(20).toString('hex');
 
   // Hash and set to resetPasswordToken field
-  user.resetPasswordToken = crypto
+  const resetPasswordToken = crypto
     .createHash('sha256')
     .update(resetToken)
     .digest('hex');
 
   // Set expire (10 minutes)
-  user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+  const resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  await user.save();
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({
+      reset_password_token: resetPasswordToken,
+      reset_password_expire: resetPasswordExpire,
+    })
+    .eq('id', user.id);
+
+  if (updateError) throw updateError;
 
   // Create reset url
   const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
@@ -316,15 +390,20 @@ const forgotPassword = asyncHandler(async (req, res) => {
         icon: '🔒',
         securityNote: 'This reset link is only valid for 10 minutes. If you did not request this change, you can safely ignore this email and your password will remain secure.',
         securityNoteType: 'warning',
-        clientUrl: process.env.CLIENT_URL || 'http://localhost:5173'
+        clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
       }),
     });
 
     res.status(200).json({ success: true, message: 'Email sent' });
   } catch (err) {
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save();
+    // Clear tokens if email failed
+    await supabase
+      .from('users')
+      .update({
+        reset_password_token: null,
+        reset_password_expire: null,
+      })
+      .eq('id', user.id);
 
     res.status(500);
     throw new Error('Email could not be sent. Please try again later.');
@@ -352,21 +431,33 @@ const resetPassword = asyncHandler(async (req, res) => {
     .update(req.params.token)
     .digest('hex');
 
-  const user = await User.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
+  const { data: user, error: fetchError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('reset_password_token', resetPasswordToken)
+    .gt('reset_password_expire', new Date().toISOString())
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
 
   if (!user) {
     res.status(400);
     throw new Error('Invalid or expired password reset token');
   }
 
-  // Set new password
-  user.password = password;
-  user.resetPasswordToken = undefined;
-  user.resetPasswordExpire = undefined;
-  await user.save();
+  // Hash new password
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({
+      password: hashedPassword,
+      reset_password_token: null,
+      reset_password_expire: null,
+    })
+    .eq('id', user.id);
+
+  if (updateError) throw updateError;
 
   res.status(200).json({
     success: true,
@@ -382,27 +473,37 @@ const verifyEmail = asyncHandler(async (req, res) => {
     .update(req.params.token)
     .digest('hex');
 
-  const user = await User.findOne({
-    emailVerificationToken,
-    emailVerificationExpire: { $gt: Date.now() },
-  });
+  const { data: user, error: fetchError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email_verification_token', emailVerificationToken)
+    .gt('email_verification_expire', new Date().toISOString())
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
 
   if (!user) {
     res.status(400);
     throw new Error('Invalid or expired email verification token.');
   }
 
-  user.isVerified = true;
-  user.emailVerificationToken = undefined;
-  user.emailVerificationExpire = undefined;
-  await user.save();
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({
+      is_verified: true,
+      email_verification_token: null,
+      email_verification_expire: null,
+    })
+    .eq('id', user.id);
+
+  if (updateError) throw updateError;
 
   res.status(200).json({
     success: true,
     message: 'Email verified successfully! You can now log in.',
     role: user.role,
     email: user.email,
-    mustChangePassword: user.mustChangePassword || false,
+    mustChangePassword: user.must_change_password || false,
   });
 });
 
@@ -416,29 +517,43 @@ const resendVerification = asyncHandler(async (req, res) => {
     throw new Error('Please provide an email address');
   }
 
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const { data: user, error: fetchError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', email.toLowerCase())
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
 
   if (!user) {
     res.status(404);
     throw new Error('There is no user registered with this email');
   }
 
-  if (user.isVerified) {
+  if (user.is_verified) {
     res.status(400);
     throw new Error('This email address is already verified');
   }
 
   // Generate verification token
   const verificationToken = crypto.randomBytes(20).toString('hex');
-  user.emailVerificationToken = crypto
+  const hashedToken = crypto
     .createHash('sha256')
     .update(verificationToken)
     .digest('hex');
 
   // Token expires in 24 hours
-  user.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000;
+  const tokenExpire = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  await user.save();
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({
+      email_verification_token: hashedToken,
+      email_verification_expire: tokenExpire,
+    })
+    .eq('id', user.id);
+
+  if (updateError) throw updateError;
 
   const verifyUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
 
@@ -462,7 +577,7 @@ const resendVerification = asyncHandler(async (req, res) => {
     icon: '✉️',
     securityNote: 'This verification link is valid for 24 hours. If you did not sign up for a ProjectBridge account, you can safely ignore this email.',
     securityNoteType: 'success',
-    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173'
+    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   });
 
   try {
@@ -481,6 +596,48 @@ const resendVerification = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: 'Verification email sent' });
 });
 
+// @desc  OAuth callback — called after Passport verifies the OAuth user
+// @route GET /api/auth/google/callback  (and /github/callback)
+const oauthCallback = asyncHandler(async (req, res) => {
+  const user = req.user;
+
+  if (!user) {
+    return res.redirect(
+      `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`
+    );
+  }
+
+  const token = generateToken(user.id);
+
+  const userData = encodeURIComponent(
+    JSON.stringify({
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      avatar: user.avatar,
+      bio: user.bio,
+      skills: user.skills,
+      techStack: user.tech_stack,
+      githubUrl: user.github_url,
+      portfolioUrl: user.portfolio_url,
+      location: user.location,
+      college: user.college,
+      rating: user.rating,
+      totalReviews: user.total_reviews,
+      completedProjects: user.completed_projects,
+      totalEarnings: user.total_earnings,
+      isVerified: user.is_verified,
+      authProvider: user.auth_provider,
+      token,
+    })
+  );
+
+  res.redirect(
+    `${process.env.CLIENT_URL || 'http://localhost:5173'}/oauth/callback?token=${token}&user=${userData}`
+  );
+});
+
 module.exports = {
   register,
   login,
@@ -491,4 +648,5 @@ module.exports = {
   resetPassword,
   verifyEmail,
   resendVerification,
+  oauthCallback,
 };

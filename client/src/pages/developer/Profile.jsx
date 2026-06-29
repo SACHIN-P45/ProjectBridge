@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateProfile } from '../../store/slices/authSlice';
+import { updateProfile, setUser } from '../../store/slices/authSlice';
+import api from '../../api/axios';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { Camera, Save, Star, Github, Globe, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -18,6 +19,28 @@ export default function DevProfile() {
   const [avatar, setAvatar] = useState(null);
   const [preview, setPreview] = useState(user?.avatar || '');
   const [skillInput, setSkillInput] = useState('');
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        dispatch(setUser(res.data));
+        setForm({
+          name: res.data.name || '',
+          bio: res.data.bio || '',
+          location: res.data.location || '',
+          githubUrl: res.data.githubUrl || '',
+          portfolioUrl: res.data.portfolioUrl || '',
+          skills: res.data.skills || [],
+          techStack: res.data.techStack || [],
+        });
+        setPreview(res.data.avatar || '');
+      } catch (err) {
+        console.error('Failed to sync profile data:', err);
+      }
+    };
+    fetchUser();
+  }, [dispatch]);
 
   const handleAvatar = (e) => {
     const f = e.target.files[0];

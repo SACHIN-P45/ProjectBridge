@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateProfile } from '../../store/slices/authSlice';
+import { updateProfile, setUser } from '../../store/slices/authSlice';
+import api from '../../api/axios';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import {
   User, Camera, Save, Star, CheckCircle, Mail, MapPin, School,
@@ -25,6 +26,28 @@ export default function StudentProfile() {
   const [skillInput, setSkillInput] = useState('');
   const [avatar, setAvatar] = useState(null);
   const [preview, setPreview] = useState(user?.avatar || '');
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        dispatch(setUser(res.data));
+        setForm({
+          name: res.data.name || '',
+          bio: res.data.bio || '',
+          college: res.data.college || '',
+          location: res.data.location || '',
+          githubUrl: res.data.githubUrl || '',
+          portfolioUrl: res.data.portfolioUrl || '',
+        });
+        setSkills(res.data.skills || []);
+        setPreview(res.data.avatar || '');
+      } catch (err) {
+        console.error('Failed to sync profile data:', err);
+      }
+    };
+    fetchUser();
+  }, [dispatch]);
 
   const handleAvatar = (e) => {
     const file = e.target.files[0];

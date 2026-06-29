@@ -36,6 +36,11 @@ export const updateProfile = createAsyncThunk('auth/updateProfile', async (formD
   }
 });
 
+// Called after OAuth redirect — user+token come from URL params, no API call needed
+export const oauthLogin = (userData) => (dispatch) => {
+  dispatch(authSlice.actions.setOAuthUser(userData));
+};
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -50,6 +55,13 @@ const authSlice = createSlice({
     setUser(state, action) {
       state.user = action.payload;
       localStorage.setItem('pb_user', JSON.stringify(action.payload));
+    },
+    setOAuthUser(state, action) {
+      const { token, ...user } = action.payload;
+      state.user = { ...user, token };
+      state.token = token;
+      localStorage.setItem('pb_token', token);
+      localStorage.setItem('pb_user', JSON.stringify({ ...user, token }));
     },
   },
   extraReducers: (builder) => {
@@ -82,5 +94,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, setUser } = authSlice.actions;
+export const { logout, clearError, setUser, setOAuthUser } = authSlice.actions;
 export default authSlice.reducer;

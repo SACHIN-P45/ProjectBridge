@@ -4,10 +4,12 @@ import { fetchAllPayments } from '../../store/slices/adminSlice';
 import DashboardLayout from '../../components/common/DashboardLayout';
 import { 
   CreditCard, ArrowUpRight, ArrowDownRight, Clock, Search, X, 
-  Eye, Calendar, FileText, CheckCircle2, DollarSign, User, ShieldCheck, AlertTriangle
+  Eye, Calendar, FileText, CheckCircle2, DollarSign, User, ShieldCheck, AlertTriangle, Loader
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency } from '../../utils/formatters';
+import api from '../../api/axios';
+import toast from 'react-hot-toast';
 
 export default function AdminPayments() {
   const dispatch = useDispatch();
@@ -16,10 +18,25 @@ export default function AdminPayments() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [refundProcessing, setRefundProcessing] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAllPayments());
   }, [dispatch]);
+
+  const handleProcessRefund = async (paymentId, decision) => {
+    setRefundProcessing(true);
+    try {
+      await api.put(`/admin/payments/${paymentId}/refund`, { decision });
+      toast.success(`Refund request ${decision} successfully! 💸`);
+      setSelectedPayment(null);
+      dispatch(fetchAllPayments());
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Failed to process refund`);
+    } finally {
+      setRefundProcessing(false);
+    }
+  };
 
   // Compute metrics dynamically
   const totalCount = payments ? payments.length : 0;
@@ -29,7 +46,7 @@ export default function AdminPayments() {
     : 0;
 
   const escrowHeld = payments 
-    ? payments.filter(p => ['held', 'pending'].includes(p.status)).reduce((sum, p) => sum + (p.amount || 0), 0)
+    ? payments.filter(p => p.status === 'held').reduce((sum, p) => sum + (p.amount || 0), 0)
     : 0;
 
   const refundedTotal = payments 
@@ -38,6 +55,9 @@ export default function AdminPayments() {
 
   // Filter payments
   const filteredPayments = payments ? payments.filter(p => {
+    // Hide unpaid pending intents unless they have an active refund request (legacy recovery)
+    if (p.status === 'pending' && p.refundStatus === 'none') return false;
+
     const matchesSearch = 
       (p.razorpayPaymentId?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       (p.project?.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -47,7 +67,8 @@ export default function AdminPayments() {
     const matchesStatus = 
       statusFilter === 'all' || 
       (statusFilter === 'released' && ['released', 'completed'].includes(p.status)) ||
-      (statusFilter === 'held' && ['held', 'pending'].includes(p.status)) ||
+      (statusFilter === 'held' && p.status === 'held') ||
+      (statusFilter === 'refund-requested' && p.refundStatus === 'requested') ||
       p.status === statusFilter;
 
     return matchesSearch && matchesStatus;
@@ -146,6 +167,7 @@ export default function AdminPayments() {
               { id: 'all', label: 'All' },
               { id: 'released', label: 'Released' },
               { id: 'held', label: 'Held in Escrow' },
+              { id: 'refund-requested', label: 'Refund Requests' },
               { id: 'refunded', label: 'Refunded' },
               { id: 'failed', label: 'Failed' }
             ].map((tab) => (
@@ -359,17 +381,43 @@ export default function AdminPayments() {
 
                 {/* Refund Status */}
                 {selectedPayment.refundStatus !== 'none' && (
-                  <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[11px] space-y-1.5 mt-2">
+                  <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl text-[11px] space-y-1.5 mt-2 text-left">
                     <div className="flex justify-between items-center">
                       <span className="text-[var(--text-muted)] font-semibold">Refund Status:</span>
                       <span className="font-bold text-blue-600 dark:text-blue-400 capitalize">{selectedPayment.refundStatus}</span>
                     </div>
                     {selectedPayment.refundReason && (
-                      <div>
+                      <div className="text-left">
                         <span className="text-[var(--text-muted)] font-semibold">Reason:</span>
                         <p className="text-[var(--text)] italic mt-0.5">"{selectedPayment.refundReason}"</p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Refund Action Buttons for Admin */}
+                {selectedPayment.refundStatus === 'requested' && (
+                  <div className="pt-3.5 border-t border-[var(--border)] flex gap-3">
+                    <button
+                      type="button"
+                      disabled={refundProcessing}
+                      onClick={() => handleProcessRefund(selectedPayment._id, 'rejected')}
+                      className="flex-1 py-2 rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-wider disabled:opacity-50"
+                    >
+                      Reject Refund
+                    </button>
+                    <button
+                      type="button"
+                      disabled={refundProcessing}
+                      onClick={() => handleProcessRefund(selectedPayment._id, 'approved')}
+                      className="flex-1 py-2 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition-all text-xs font-black uppercase tracking-wider disabled:opacity-50 flex items-center justify-center gap-1.5 border-0"
+                    >
+                      {refundProcessing ? (
+                        <Loader size={14} className="animate-spin" />
+                      ) : (
+                        'Approve Refund'
+                      )}
+                    </button>
                   </div>
                 )}
 
