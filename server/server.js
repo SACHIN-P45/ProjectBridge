@@ -5,11 +5,17 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const connectDB = require('./config/db');
+const session = require('express-session');
+const passport = require('./config/passport');
+const { connectDB } = require('./config/db');
 const { socketHandler } = require('./socket/socketHandler');
 
 // Connect to DB
-connectDB();
+connectDB().then(() => {
+  const { syncAllDeveloperStats, syncAllStudentStats } = require('./utils/developerStats');
+  syncAllDeveloperStats();
+  syncAllStudentStats();
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +54,19 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// ── Session (used only transiently for Passport OAuth flow) ──
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'projectbridge_session_secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false, maxAge: 5 * 60 * 1000 }, // 5 minute session window
+  })
+);
+
+// ── Passport ─────────────────────────────────────────────────
+app.use(passport.initialize());
+
 // ── Serve static uploads ─────────────────────────────────────
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -67,9 +86,18 @@ app.get('/', (req, res) => res.json({ message: '🚀 ProjectBridge API is runnin
 
 // ── Global Error Handler ─────────────────────────────────────
 app.use((err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  let message = err.message;
+
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    statusCode = 400;
+    message = 'File is too large. The maximum allowed size is 100MB.';
+  } else if (err.name === 'MulterError') {
+    statusCode = 400;
+  }
+
   res.status(statusCode).json({
-    message: err.message,
+    message,
     stack: process.env.NODE_ENV === 'production' ? null : err.stack,
   });
 });

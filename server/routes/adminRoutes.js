@@ -15,7 +15,8 @@ const {
   getAllPayments,
   getAllReviews,
   deleteReview,
-  sendGlobalNotification
+  sendGlobalNotification,
+  processRefund
 } = require('../controllers/adminController');
 
 // Public route - developer sets their own password after email verification
@@ -44,6 +45,8 @@ router.route('/projects/:id')
 
 router.route('/payments')
   .get(getAllPayments);
+
+router.put('/payments/:id/refund', processRefund);
 
 router.route('/reviews')
   .get(getAllReviews);

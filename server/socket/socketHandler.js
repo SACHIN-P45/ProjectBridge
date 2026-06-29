@@ -1,6 +1,4 @@
-const Message = require('../models/Message');
-const Chat = require('../models/Chat');
-const User = require('../models/User');
+const { supabase } = require('../config/db');
 
 const onlineUsers = new Map(); // userId -> socketId
 
@@ -12,21 +10,36 @@ const socketHandler = (io) => {
     socket.on('user_online', async (userId) => {
       onlineUsers.set(userId, socket.id);
       socket.userId = userId;
-      await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
 
-      // Update all messages where recipient is this user to delivered = true
       try {
-        const userChats = await Chat.find({ $or: [{ student: userId }, { developer: userId }] });
-        const chatIds = userChats.map(c => c._id);
-        
-        await Message.updateMany(
-          { chat: { $in: chatIds }, sender: { $ne: userId }, delivered: false },
-          { delivered: true, deliveredAt: new Date() }
-        );
+        await supabase
+          .from('users')
+          .update({ is_online: true, last_seen: new Date().toISOString() })
+          .eq('id', userId);
 
-        chatIds.forEach(chatId => {
-          socket.to(chatId.toString()).emit('messages_delivered', { chatId, recipientId: userId });
-        });
+        // Update all messages where recipient is this user to delivered = true
+        const { data: userChats } = await supabase
+          .from('chats')
+          .select('id')
+          .or(`student_id.eq.${userId},developer_id.eq.${userId}`);
+
+        const chatIds = (userChats || []).map((c) => c.id);
+
+        if (chatIds.length > 0) {
+          await supabase
+            .from('messages')
+            .update({
+              delivered: true,
+              delivered_at: new Date().toISOString(),
+            })
+            .in('chat_id', chatIds)
+            .neq('sender_id', userId)
+            .eq('delivered', false);
+
+          chatIds.forEach((chatId) => {
+            socket.to(chatId).emit('messages_delivered', { chatId, recipientId: userId });
+          });
+        }
       } catch (err) {
         console.error('Error marking local messages delivered on online:', err);
       }
@@ -59,13 +72,18 @@ const socketHandler = (io) => {
         socket.to(chatId).emit('receive_message', message);
 
         // Send notification to the other user if they are online
-        const chat = await Chat.findById(chatId).populate('student developer');
-        if (!chat) return;
+        const { data: chat, error } = await supabase
+          .from('chats')
+          .select('*')
+          .eq('id', chatId)
+          .maybeSingle();
+
+        if (error || !chat) return;
 
         const receiverId =
-          chat.student._id.toString() === senderId
-            ? chat.developer._id.toString()
-            : chat.student._id.toString();
+          chat.student_id === senderId
+            ? chat.developer_id
+            : chat.student_id;
 
         const receiverSocketId = onlineUsers.get(receiverId);
         if (receiverSocketId) {
@@ -105,10 +123,18 @@ const socketHandler = (io) => {
     socket.on('message_seen', async (data) => {
       try {
         const { chatId, userId } = data;
-        await Message.updateMany(
-          { chat: chatId, sender: { $ne: userId }, seen: false },
-          { seen: true, seenAt: new Date(), delivered: true, deliveredAt: new Date() }
-        );
+        await supabase
+          .from('messages')
+          .update({
+            seen: true,
+            seen_at: new Date().toISOString(),
+            delivered: true,
+            delivered_at: new Date().toISOString(),
+          })
+          .eq('chat_id', chatId)
+          .neq('sender_id', userId)
+          .eq('seen', false);
+
         socket.to(chatId).emit('messages_seen', { chatId, userId });
       } catch (error) {
         console.error('Mark seen error:', error);
@@ -119,10 +145,17 @@ const socketHandler = (io) => {
     socket.on('disconnect', async () => {
       if (socket.userId) {
         onlineUsers.delete(socket.userId);
-        await User.findByIdAndUpdate(socket.userId, {
-          isOnline: false,
-          lastSeen: new Date(),
-        });
+        try {
+          await supabase
+            .from('users')
+            .update({
+              is_online: false,
+              last_seen: new Date().toISOString(),
+            })
+            .eq('id', socket.userId);
+        } catch (err) {
+          console.error('Error setting user offline on disconnect:', err);
+        }
         io.emit('online_users', Array.from(onlineUsers.keys()));
         console.log(`❌ User offline: ${socket.userId}`);
       }

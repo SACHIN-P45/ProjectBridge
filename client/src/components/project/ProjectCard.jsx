@@ -1,5 +1,6 @@
 import { Clock, Users, Zap, ExternalLink, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 const statusConfig = {
   open:         { label: 'Open for Bids', dot: '#10b981', bg: 'rgba(16,185,129,0.12)', color: '#10b981' },
@@ -22,6 +23,7 @@ const categoryMeta = {
 
 export default function ProjectCard({ project, showActions = true, onBid, onView }) {
   const navigate  = useNavigate();
+  const { user }  = useSelector((s) => s.auth);
   const status    = statusConfig[project.status] || statusConfig.open;
   const cat       = categoryMeta[project.category] || categoryMeta.other;
   const daysLeft  = Math.ceil((new Date(project.deadline) - new Date()) / 86400000);
@@ -29,6 +31,12 @@ export default function ProjectCard({ project, showActions = true, onBid, onView
   const expired   = daysLeft <= 0;
   const budget    = project.budget?.toLocaleString('en-IN');
   const bidCount  = project.bidCount || 0;
+
+  const handleDetails = () => {
+    if (onView) return onView(project);
+    if (user?.role === 'developer') return navigate(`/developer/projects/${project._id}`);
+    return navigate(`/student/projects/${project._id}`);
+  };
 
   return (
     <div className="pb-card">
@@ -103,7 +111,7 @@ export default function ProjectCard({ project, showActions = true, onBid, onView
       {showActions && (
         <div className="pb-card-actions">
           <button
-            onClick={() => onView ? onView(project) : navigate(`/student/projects/${project._id}`)}
+            onClick={handleDetails}
             className="pb-btn-ghost"
           >
             <ExternalLink size={14} /> Details

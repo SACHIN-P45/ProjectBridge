@@ -1,142 +1,317 @@
 const asyncHandler = require('express-async-handler');
-const Bid = require('../models/Bid');
-const ProjectRequest = require('../models/ProjectRequest');
-const Chat = require('../models/Chat');
-const Notification = require('../models/Notification');
+const { supabase } = require('../config/db');
 
 // @desc Submit a bid
 // @route POST /api/bids
 const submitBid = asyncHandler(async (req, res) => {
   const { projectId, price, deliveryDays, proposal } = req.body;
 
-  const project = await ProjectRequest.findById(projectId);
-  if (!project || project.status !== 'open') {
+  const { data: project, error: projectError } = await supabase
+    .from('project_requests')
+    .select('*')
+    .eq('id', projectId)
+    .maybeSingle();
+
+  if (projectError || !project || project.status !== 'open') {
     res.status(400);
     throw new Error('Project is not open for bids');
   }
 
-  const existingBid = await Bid.findOne({ project: projectId, developer: req.user._id });
+  const { data: existingBid, error: checkError } = await supabase
+    .from('bids')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('developer_id', req.user.id)
+    .maybeSingle();
+
+  if (checkError) throw checkError;
+
   if (existingBid) {
     res.status(400);
     throw new Error('You have already submitted a bid for this project');
   }
 
-  const bid = await Bid.create({
-    project: projectId,
-    developer: req.user._id,
-    price: Number(price),
-    deliveryDays: Number(deliveryDays),
-    proposal,
-  });
+  const { data: bid, error: createError } = await supabase
+    .from('bids')
+    .insert({
+      project_id: projectId,
+      developer_id: req.user.id,
+      price: Number(price),
+      delivery_days: Number(deliveryDays),
+      proposal,
+    })
+    .select()
+    .single();
 
-  // Increment bid count
-  await ProjectRequest.findByIdAndUpdate(projectId, { $inc: { bidCount: 1 } });
+  if (createError) {
+    res.status(400);
+    throw createError;
+  }
+
+  // Increment bid count on project
+  await supabase
+    .from('project_requests')
+    .update({ bid_count: (project.bid_count || 0) + 1 })
+    .eq('id', projectId);
 
   // Notify student
-  await Notification.create({
-    user: project.student,
-    type: 'bid',
-    title: 'New Quotation Received',
-    message: `A developer submitted a quotation for "${project.title}"`,
-    link: `/student/projects/${projectId}`,
-    relatedId: bid._id,
-  });
+  await supabase
+    .from('notifications')
+    .insert({
+      user_id: project.student_id,
+      type: 'bid',
+      title: 'New Quotation Received',
+      message: `A developer submitted a quotation for "${project.title}"`,
+      link: `/student/projects/${projectId}`,
+      related_id: bid.id,
+    });
 
-  const populated = await bid.populate('developer', 'name avatar skills rating completedProjects');
-  res.status(201).json(populated);
+  const { data: populated, error: popError } = await supabase
+    .from('bids')
+    .select('*, developer:users(id, name, avatar, skills, rating, completed_projects)')
+    .eq('id', bid.id)
+    .single();
+
+  if (popError) throw popError;
+
+  const formatted = {
+    ...populated,
+    _id: populated.id,
+    project: populated.project_id,
+    developer: {
+      ...populated.developer,
+      _id: populated.developer.id,
+      completedProjects: populated.developer.completed_projects,
+    },
+    deliveryDays: populated.delivery_days,
+  };
+
+  res.status(201).json(formatted);
 });
 
 // @desc Get bids for a project
 // @route GET /api/bids/project/:projectId
 const getProjectBids = asyncHandler(async (req, res) => {
-  const bids = await Bid.find({ project: req.params.projectId })
-    .populate('developer', 'name avatar skills rating totalReviews completedProjects githubUrl portfolioUrl bio')
-    .sort({ createdAt: -1 });
-  res.json(bids);
+  const { data: bids, error } = await supabase
+    .from('bids')
+    .select('*, developer:users(id, name, avatar, skills, rating, total_reviews, completed_projects, github_url, portfolio_url, bio)')
+    .eq('project_id', req.params.projectId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    res.status(400);
+    throw error;
+  }
+
+  const formattedBids = (bids || []).map((b) => {
+    const formatted = {
+      ...b,
+      _id: b.id,
+      project: b.project_id,
+      deliveryDays: b.delivery_days,
+    };
+    if (formatted.developer) {
+      formatted.developer = {
+        ...formatted.developer,
+        _id: formatted.developer.id,
+        totalReviews: formatted.developer.total_reviews,
+        completedProjects: formatted.developer.completed_projects,
+        githubUrl: formatted.developer.github_url,
+        portfolioUrl: formatted.developer.portfolio_url,
+      };
+    }
+    return formatted;
+  });
+
+  res.json(formattedBids);
 });
 
 // @desc Accept a bid
 // @route PUT /api/bids/:id/accept
 const acceptBid = asyncHandler(async (req, res) => {
-  const bid = await Bid.findById(req.params.id).populate('developer');
-  if (!bid) {
+  const { data: bid, error: bidError } = await supabase
+    .from('bids')
+    .select('*, developer:users(*)')
+    .eq('id', req.params.id)
+    .maybeSingle();
+
+  if (bidError || !bid) {
     res.status(404);
     throw new Error('Bid not found');
   }
 
-  const project = await ProjectRequest.findById(bid.project);
-  if (!project) {
+  const { data: project, error: projectError } = await supabase
+    .from('project_requests')
+    .select('*')
+    .eq('id', bid.project_id)
+    .maybeSingle();
+
+  if (projectError || !project) {
     res.status(404);
     throw new Error('Project not found');
   }
-  if (project.student.toString() !== req.user._id.toString()) {
+
+  if (project.student_id !== req.user.id) {
     res.status(403);
     throw new Error('Not authorized');
   }
 
   // Accept this bid
-  bid.status = 'accepted';
-  await bid.save();
+  await supabase
+    .from('bids')
+    .update({ status: 'accepted' })
+    .eq('id', bid.id);
 
   // Reject all other bids
-  await Bid.updateMany(
-    { project: bid.project, _id: { $ne: bid._id } },
-    { status: 'rejected' }
-  );
+  await supabase
+    .from('bids')
+    .update({ status: 'rejected' })
+    .eq('project_id', bid.project_id)
+    .neq('id', bid.id);
 
   // Update project
-  project.status = 'in-progress';
-  project.assignedDeveloper = bid.developer._id;
-  project.selectedBid = bid._id;
-  await project.save();
+  await supabase
+    .from('project_requests')
+    .update({
+      status: 'in-progress',
+      assigned_developer_id: bid.developer_id,
+      selected_bid_id: bid.id,
+    })
+    .eq('id', project.id);
 
-  // Create chat room
-  await Chat.findOneAndUpdate(
-    { project: project._id },
-    { project: project._id, student: project.student, developer: bid.developer._id },
-    { upsert: true, new: true }
-  );
+  // Create chat room (upsert)
+  const { data: existingChat } = await supabase
+    .from('chats')
+    .select('id')
+    .eq('project_id', project.id)
+    .maybeSingle();
+
+  if (!existingChat) {
+    await supabase
+      .from('chats')
+      .insert({
+        project_id: project.id,
+        student_id: project.student_id,
+        developer_id: bid.developer_id,
+      });
+  }
 
   // Notify developer
-  await Notification.create({
-    user: bid.developer._id,
-    type: 'bid_accepted',
-    title: 'Your Bid Was Accepted! 🎉',
-    message: `Your bid on "${project.title}" was accepted. Check your messages!`,
-    link: `/developer/assigned`,
-    relatedId: project._id,
-  });
+  await supabase
+    .from('notifications')
+    .insert({
+      user_id: bid.developer_id,
+      type: 'bid_accepted',
+      title: 'Your Bid Was Accepted! 🎉',
+      message: `Your bid on "${project.title}" was accepted. Check your messages!`,
+      link: `/developer/assigned`,
+      related_id: project.id,
+    });
 
-  res.json({ message: 'Bid accepted successfully', bid, project });
+  // Fetch updated bid and project to return
+  const { data: updatedBid } = await supabase
+    .from('bids')
+    .select('*')
+    .eq('id', bid.id)
+    .single();
+
+  const { data: updatedProject } = await supabase
+    .from('project_requests')
+    .select('*')
+    .eq('id', project.id)
+    .single();
+
+  updatedBid._id = updatedBid.id;
+  updatedProject._id = updatedProject.id;
+
+  res.json({ message: 'Bid accepted successfully', bid: updatedBid, project: updatedProject });
 });
 
 // @desc Get developer's own bids
 // @route GET /api/bids/my
 const getMyBids = asyncHandler(async (req, res) => {
-  const bids = await Bid.find({ developer: req.user._id })
-    .populate('project', 'title status budget deadline student techStack category')
-    .populate({ path: 'project', populate: { path: 'student', select: 'name avatar' } })
-    .sort({ createdAt: -1 });
-  res.json(bids);
+  const { data: bids, error } = await supabase
+    .from('bids')
+    .select('*, project:project_requests(id, title, status, budget, deadline, student_id, tech_stack, category, student:users!student_id(id, name, avatar))')
+    .eq('developer_id', req.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    res.status(400);
+    throw error;
+  }
+
+  const formattedBids = (bids || []).map((b) => {
+    const formatted = {
+      ...b,
+      _id: b.id,
+      project: b.project_id,
+      deliveryDays: b.delivery_days,
+    };
+    if (b.project) {
+      formatted.project = {
+        ...b.project,
+        _id: b.project.id,
+        techStack: b.project.tech_stack,
+        studentId: b.project.student_id,
+      };
+      if (b.project.student) {
+        formatted.project.student = {
+          ...b.project.student,
+          _id: b.project.student.id,
+        };
+      }
+    }
+    return formatted;
+  });
+
+  res.json(formattedBids);
 });
 
 // @desc Update bid
 // @route PUT /api/bids/:id
 const updateBid = asyncHandler(async (req, res) => {
-  const bid = await Bid.findById(req.params.id);
-  if (!bid) { res.status(404); throw new Error('Bid not found'); }
-  if (bid.developer.toString() !== req.user._id.toString()) {
-    res.status(403); throw new Error('Not authorized');
+  const { data: bid, error: fetchError } = await supabase
+    .from('bids')
+    .select('*')
+    .eq('id', req.params.id)
+    .maybeSingle();
+
+  if (fetchError || !bid) {
+    res.status(404);
+    throw new Error('Bid not found');
   }
+
+  if (bid.developer_id !== req.user.id) {
+    res.status(403);
+    throw new Error('Not authorized');
+  }
+
   if (bid.status !== 'pending') {
-    res.status(400); throw new Error('Cannot update a bid that is already processed');
+    res.status(400);
+    throw new Error('Cannot update a bid that is already processed');
   }
+
   const { price, deliveryDays, proposal } = req.body;
-  if (price) bid.price = price;
-  if (deliveryDays) bid.deliveryDays = deliveryDays;
-  if (proposal) bid.proposal = proposal;
-  await bid.save();
-  res.json(bid);
+  const updateData = {};
+  if (price) updateData.price = Number(price);
+  if (deliveryDays) updateData.delivery_days = Number(deliveryDays);
+  if (proposal) updateData.proposal = proposal;
+
+  const { data: updated, error: updateError } = await supabase
+    .from('bids')
+    .update(updateData)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (updateError) {
+    res.status(400);
+    throw updateError;
+  }
+
+  updated._id = updated.id;
+  res.json(updated);
 });
 
 module.exports = { submitBid, getProjectBids, acceptBid, getMyBids, updateBid };
