@@ -174,16 +174,15 @@ const createDeveloper = asyncHandler(async (req, res) => {
     clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   });
 
-  try {
-    await sendEmail({
-      to: user.email,
-      subject: 'Welcome to ProjectBridge - Account Activation Required',
-      text: textMessage,
-      html: htmlMessage,
-    });
-  } catch (err) {
+  // Send the verification email in the background so it doesn't block the API response
+  sendEmail({
+    to: user.email,
+    subject: 'Welcome to ProjectBridge - Account Activation Required',
+    text: textMessage,
+    html: htmlMessage,
+  }).catch((err) => {
     console.error('Failed to send verification email during developer creation:', err);
-  }
+  });
 
   res.status(201).json({
     _id: user.id,

@@ -97,16 +97,15 @@ const register = asyncHandler(async (req, res) => {
     clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   });
 
-  try {
-    await sendEmail({
-      to: user.email,
-      subject: 'ProjectBridge Email Verification',
-      text: textMessage,
-      html: htmlMessage,
-    });
-  } catch (err) {
+  // Send verification email in the background to avoid blocking the API response
+  sendEmail({
+    to: user.email,
+    subject: 'ProjectBridge Email Verification',
+    text: textMessage,
+    html: htmlMessage,
+  }).catch((err) => {
     console.error('Failed to send verification email during registration:', err);
-  }
+  });
 
   res.status(201).json({
     success: true,
@@ -188,16 +187,15 @@ const login = asyncHandler(async (req, res) => {
       clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
     });
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'ProjectBridge - Email Verification Required',
-        text: textMessage,
-        html: htmlMessage,
-      });
-    } catch (err) {
+    // Send verification email in the background to avoid blocking the API response
+    sendEmail({
+      to: user.email,
+      subject: 'ProjectBridge - Email Verification Required',
+      text: textMessage,
+      html: htmlMessage,
+    }).catch((err) => {
       console.error('Failed to send verification email on login:', err);
-    }
+    });
 
     res.status(401);
     throw new Error('Please verify your email address to activate your account.');
