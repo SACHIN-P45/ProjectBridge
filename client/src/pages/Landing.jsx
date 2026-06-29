@@ -6,7 +6,7 @@ import {
   ArrowRight, Code2, GraduationCap, Star, Shield, Zap, MessageSquare,
   CreditCard, CheckCircle, Globe, Github, Users, Database, Server,
   Smartphone, Cpu, Layers, TrendingUp, Lock, Award, ChevronRight,
-  Sparkles, Moon, Sun, Play, LogOut, User, LayoutDashboard, FolderOpen
+  Sparkles, Moon, Sun, Play, LogOut, User, LayoutDashboard, FolderOpen, Menu, X
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -43,6 +43,7 @@ export default function Landing() {
   const heroRef = useRef(null);
   const dropdownRef = useRef(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { user } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
@@ -219,30 +220,32 @@ export default function Landing() {
 
       {/* ══ NAVBAR ══ */}
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[var(--bg)]/80 backdrop-blur-2xl border-b border-[var(--border)] shadow-sm' : ''}`}>
-        <div className="w-full px-8 lg:px-16 xl:px-24 h-20 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-brand-500/30 blur-md rounded-full group-hover:bg-brand-500/50 transition-colors" />
-              <img src="/logo.png" alt="Logo" className="h-10 w-auto relative" />
-            </div>
-            <span className="font-display font-black text-xl text-[var(--text)] tracking-tight hidden sm:block">
+        <div className="w-full px-4 sm:px-8 lg:px-16 xl:px-24 h-16 sm:h-20 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
+            <img
+              src="/logo.png"
+              alt="ProjectBridge Logo"
+              className="h-8 sm:h-10 w-auto object-contain drop-shadow-[0_0_10px_rgba(59,130,246,0.35)] transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="font-display font-black text-lg sm:text-xl text-[var(--text)] tracking-tight hidden xs:block">
               Project<span className="text-brand-500">Bridge</span>
             </span>
           </Link>
 
+          {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-[var(--text-muted)]">
             {['Features', 'How It Works'].map(l => (
               <a key={l} href={`#${l.toLowerCase().replace(/ /g, '-')}`} className="hover:text-[var(--text)] transition-colors">{l}</a>
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button onClick={toggleTheme}
-              className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--bg-secondary)] hover:bg-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-[var(--bg-secondary)] hover:bg-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all">
               {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
             {user ? (
-              <div className="relative flex items-center gap-3" ref={dropdownRef}>
+              <div className="relative flex items-center gap-2 sm:gap-3" ref={dropdownRef}>
                 <Link
                   to={user.role === 'student' ? '/student/dashboard' : user.role === 'admin' ? '/admin/dashboard' : '/developer/dashboard'}
                   className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-brand-500 to-violet-600 hover:from-brand-600 hover:to-violet-700 shadow-lg shadow-brand-500/20 hover:shadow-brand-500/40 transition-all hover:-translate-y-0.5"
@@ -250,11 +253,9 @@ export default function Landing() {
                   <LayoutDashboard size={15} />
                   Dashboard
                 </Link>
-
-                {/* Profile Trigger */}
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="w-10 h-10 rounded-full overflow-hidden border-2 border-brand-500/50 hover:border-brand-500 transition-all focus:outline-none flex items-center justify-center"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-brand-500/50 hover:border-brand-500 transition-all focus:outline-none flex items-center justify-center"
                 >
                   {user.avatar ? (
                     <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
@@ -264,56 +265,48 @@ export default function Landing() {
                     </div>
                   )}
                 </button>
-
-                {/* Dropdown Menu */}
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-12 w-60 rounded-2xl border border-[var(--border)] bg-[var(--card)]/90 backdrop-blur-xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 top-12 w-60 rounded-2xl border border-[var(--border)] bg-[var(--card)]/90 backdrop-blur-xl shadow-2xl py-2 z-50">
                     <div className="px-4 py-3 border-b border-[var(--border)]">
                       <p className="text-sm font-bold text-[var(--text)] truncate">{user.name}</p>
                       <p className="text-xs text-[var(--text-muted)] capitalize mt-0.5 font-medium">{user.role}</p>
                     </div>
-
                     <div className="p-1">
-                      <Link
-                        to={user.role === 'student' ? '/student/dashboard' : user.role === 'admin' ? '/admin/dashboard' : '/developer/dashboard'}
-                        onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors"
-                      >
-                        <LayoutDashboard size={16} className="text-brand-500" />
-                        My Dashboard
-                      </Link>
-
-                      {user.role !== 'admin' && (
-                        <Link
-                          to={user.role === 'student' ? '/student/profile' : '/developer/profile'}
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors"
-                        >
-                          <User size={16} className="text-violet-500" />
-                          My Profile
-                        </Link>
-                      )}
-
-                      <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                      >
-                        <LogOut size={16} />
-                        Sign Out
-                      </button>
+                      <Link to={user.role === 'student' ? '/student/dashboard' : user.role === 'admin' ? '/admin/dashboard' : '/developer/dashboard'} onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors"><LayoutDashboard size={16} className="text-brand-500" />My Dashboard</Link>
+                      {user.role !== 'admin' && (<Link to={user.role === 'student' ? '/student/profile' : '/developer/profile'} onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors"><User size={16} className="text-violet-500" />My Profile</Link>)}
+                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"><LogOut size={16} />Sign Out</button>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
               <>
-                <Link to="/login" className="hidden sm:flex px-4 py-2 rounded-xl font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-all text-sm">
-                  Sign In
-                </Link>
-                <Link to="/register" className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-brand-500 to-violet-600 hover:from-brand-600 hover:to-violet-700 shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 transition-all hover:-translate-y-0.5">
-                  Get Started <ChevronRight size={15} />
-                </Link>
+                <Link to="/login" className="hidden sm:flex px-4 py-2 rounded-xl font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-all text-sm">Sign In</Link>
+                <Link to="/register" className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-brand-500 to-violet-600 hover:from-brand-600 hover:to-violet-700 shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5">Get Started <ChevronRight size={15} className="hidden sm:block" /></Link>
               </>
+            )}
+            {/* Mobile hamburger for non-logged-in users on small screens */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center bg-[var(--bg-secondary)] hover:bg-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all"
+            >
+              {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        <div className={`md:hidden overflow-hidden transition-all duration-300 border-t border-[var(--border)] bg-[var(--bg)]/95 backdrop-blur-2xl ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="px-4 py-4 space-y-1">
+            {['Features', 'How It Works'].map(l => (
+              <a key={l} href={`#${l.toLowerCase().replace(/ /g, '-')}`} onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center px-4 py-3 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors">{l}</a>
+            ))}
+            {!user && (
+              <div className="pt-2 border-t border-[var(--border)] mt-2 space-y-2">
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="flex justify-center px-4 py-3 rounded-xl font-semibold text-sm text-[var(--text)] bg-[var(--bg-secondary)] transition-all">Sign In</Link>
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="flex justify-center items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-brand-500 to-violet-600">Get Started <ArrowRight size={15} /></Link>
+              </div>
             )}
           </div>
         </div>
@@ -321,11 +314,11 @@ export default function Landing() {
 
       {/* ══ HERO ══ */}
       <section ref={heroRef} onMouseMove={handleMouseMove}
-        className="relative min-h-screen flex items-center justify-center pt-28 pb-24 overflow-hidden z-10">
+        className="relative min-h-screen flex items-center justify-center pt-20 sm:pt-28 pb-16 sm:pb-24 overflow-hidden z-10">
         <div className="cursor-glow absolute inset-0 z-0 transition-all duration-200"
           style={{ '--mx': `${mousePos.x}%`, '--my': `${mousePos.y}%` }} />
 
-        <div className="w-full px-8 lg:px-16 xl:px-24 flex flex-col lg:flex-row items-center gap-16 relative z-10">
+        <div className="w-full px-4 sm:px-8 lg:px-16 xl:px-24 flex flex-col lg:flex-row items-center gap-10 sm:gap-16 relative z-10">
 
           {/* Left: copy */}
           <div className="flex-1 text-center lg:text-left">
@@ -343,7 +336,7 @@ export default function Landing() {
               <span className="animated-gradient-text">become real products.</span>
             </h1>
 
-            <p className="su su-3 text-xl text-[var(--text-muted)] leading-relaxed mb-10 font-light">
+            <p className="su su-3 text-base sm:text-xl text-[var(--text-muted)] leading-relaxed mb-8 sm:mb-10 font-light">
               Post your project, get bids from verified developers, collaborate in real-time, and receive a fully working application — with code, docs & live demo.
             </p>
 
@@ -469,12 +462,12 @@ export default function Landing() {
 
       {/* ══ STATS BAND ══ */}
       <div className="relative z-10 border-y border-[var(--border)] bg-[var(--bg-secondary)]/60 backdrop-blur-xl">
-        <div className="w-full px-8 lg:px-16 xl:px-24 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="w-full px-4 sm:px-8 lg:px-16 xl:px-24 py-8 sm:py-10 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
           {STATS.map(({ value, label, color }, i) => (
             <div key={i} className="text-center">
-              <p className="stat-num font-display font-black text-4xl mb-1 tracking-tighter"
+              <p className="stat-num font-display font-black text-3xl sm:text-4xl mb-1 tracking-tighter"
                 style={{ color }}>{value}</p>
-              <p className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider">{label}</p>
+              <p className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wider">{label}</p>
             </div>
           ))}
         </div>
@@ -495,18 +488,18 @@ export default function Landing() {
       </div>
 
       {/* ══ BENTO FEATURES ══ */}
-      <section id="features" className="py-32 px-8 lg:px-16 xl:px-24 relative z-10">
+      <section id="features" className="py-16 sm:py-24 lg:py-32 px-4 sm:px-8 lg:px-16 xl:px-24 relative z-10">
         <div className="w-full">
-          <div className="text-center mb-20">
+          <div className="text-center mb-12 sm:mb-20">
             <p className="text-brand-500 font-bold uppercase tracking-widest text-sm mb-4">Platform Features</p>
             <h2 className="font-display font-black text-[var(--text)] tracking-tighter mb-5"
-              style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}>
+              style={{ fontSize: 'clamp(1.9rem, 5vw, 4rem)' }}>
               Built for students.<br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-violet-500 to-emerald-500">
                 Trusted by developers.
               </span>
             </h2>
-            <p className="text-xl text-[var(--text-muted)] font-light w-full max-w-3xl mx-auto">
+            <p className="text-base sm:text-xl text-[var(--text-muted)] font-light w-full max-w-3xl mx-auto">
               Every tool you need — from posting your first project to receiving a deployed live app.
             </p>
           </div>
@@ -610,12 +603,12 @@ export default function Landing() {
       </section>
 
       {/* ══ HOW IT WORKS ══ */}
-      <section id="how-it-works" className="py-32 px-8 lg:px-16 xl:px-24 relative z-10 border-y border-[var(--border)] bg-[var(--bg-secondary)]/40 backdrop-blur-xl">
+      <section id="how-it-works" className="py-16 sm:py-24 lg:py-32 px-4 sm:px-8 lg:px-16 xl:px-24 relative z-10 border-y border-[var(--border)] bg-[var(--bg-secondary)]/40 backdrop-blur-xl">
         <div className="w-full">
-          <div className="text-center mb-24">
+          <div className="text-center mb-12 sm:mb-24">
             <p className="text-violet-500 font-bold uppercase tracking-widest text-sm mb-4">Process</p>
             <h2 className="font-display font-black text-[var(--text)] tracking-tighter mb-4"
-              style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}>
+              style={{ fontSize: 'clamp(1.9rem, 5vw, 4rem)' }}>
               Zero to <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-brand-500">shipped</span> in 4 steps.
             </h2>
           </div>
@@ -653,28 +646,28 @@ export default function Landing() {
       </section>
 
       {/* ══ TESTIMONIALS ══ */}
-      <section className="py-32 px-8 lg:px-16 xl:px-24 relative z-10">
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-8 lg:px-16 xl:px-24 relative z-10">
         <div className="w-full">
-          <div className="text-center mb-20">
+          <div className="text-center mb-12 sm:mb-20">
             <p className="text-emerald-500 font-bold uppercase tracking-widest text-sm mb-4">Success Stories</p>
             <h2 className="font-display font-black text-[var(--text)] tracking-tighter"
-              style={{ fontSize: 'clamp(2.2rem, 5vw, 4rem)' }}>
+              style={{ fontSize: 'clamp(1.9rem, 5vw, 4rem)' }}>
               Loved by the <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-brand-500">community</span>.
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
             {TESTIMONIALS.map((t, i) => (
               <div key={i} className="glow-card" style={{ '--gc': '#6366f1' }}>
-                <div className="glow-card-inner p-8 h-full flex flex-col justify-between">
+                <div className="glow-card-inner p-6 sm:p-8 h-full flex flex-col justify-between">
                   <div>
-                    <div className="flex gap-1 mb-5">
+                    <div className="flex gap-1 mb-4 sm:mb-5">
                       {[...Array(t.rating)].map((_, j) => <Star key={j} size={16} className="text-amber-400 fill-amber-400" />)}
                     </div>
-                    <p className="text-[var(--text)] leading-relaxed font-medium text-lg mb-6">"{t.text}"</p>
+                    <p className="text-[var(--text)] leading-relaxed font-medium text-base sm:text-lg mb-5 sm:mb-6">"{t.text}"</p>
                   </div>
-                  <div className="flex items-center gap-4 pt-5 border-t border-[var(--border)]">
-                    <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full object-cover border-2 border-brand-500/30" />
+                  <div className="flex items-center gap-4 pt-4 sm:pt-5 border-t border-[var(--border)]">
+                    <img src={t.avatar} alt={t.name} className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-brand-500/30" />
                     <div>
                       <p className="font-bold text-[var(--text)]">{t.name}</p>
                       <p className="text-sm text-[var(--text-muted)]">{t.role}</p>
@@ -688,7 +681,7 @@ export default function Landing() {
       </section>
 
       {/* ══ CTA ══ */}
-      <section className="py-32 px-8 lg:px-16 xl:px-24 relative z-10 overflow-hidden">
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-8 lg:px-16 xl:px-24 relative z-10 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full bg-brand-500/15 blur-[120px]" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[300px] rounded-full bg-violet-500/15 blur-[100px]" />
@@ -696,7 +689,7 @@ export default function Landing() {
 
         <div className="w-full text-center relative">
           {/* Glowing container */}
-          <div className="rounded-[2.5rem] p-16 relative overflow-hidden border border-brand-500/20"
+          <div className="rounded-2xl sm:rounded-[2.5rem] p-8 sm:p-12 lg:p-16 relative overflow-hidden border border-brand-500/20"
             style={{
               background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.04), rgba(16,185,129,0.04))',
               backdropFilter: 'blur(20px)',
@@ -732,14 +725,18 @@ export default function Landing() {
       </section>
 
       {/* ══ FOOTER ══ */}
-      <footer className="py-14 px-8 lg:px-16 xl:px-24 border-t border-[var(--border)] bg-[var(--bg-secondary)]/40 backdrop-blur-xl relative z-10">
+      <footer className="py-10 sm:py-14 px-4 sm:px-8 lg:px-16 xl:px-24 border-t border-[var(--border)] bg-[var(--bg-secondary)]/40 backdrop-blur-xl relative z-10">
         <div className="w-full">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8 mb-8 sm:mb-10">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="Logo" className="h-9 w-auto grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all" />
+              <img
+                src="/logo.png"
+                alt="ProjectBridge Logo"
+                className="h-8 w-auto object-contain opacity-60 hover:opacity-90 transition-all duration-300 grayscale hover:grayscale-0"
+              />
               <span className="font-display font-black text-lg text-[var(--text-muted)]">Project<span className="text-brand-500">Bridge</span></span>
             </div>
-            <div className="flex items-center gap-8 text-sm font-semibold text-[var(--text-muted)]">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-sm font-semibold text-[var(--text-muted)]">
               {['Features', 'How It Works', 'Privacy', 'Terms'].map(l => (
                 <a key={l} href={l === 'Privacy' || l === 'Terms' ? '#' : `#${l.toLowerCase().replace(/ /g, '-')}`} className="hover:text-[var(--text)] transition-colors">{l}</a>
               ))}
@@ -750,8 +747,8 @@ export default function Landing() {
               <Users size={20} className="text-[var(--text-muted)] hover:text-brand-500 cursor-pointer transition-colors" />
             </div>
           </div>
-          <div className="pt-8 border-t border-[var(--border)] text-center">
-            <p className="text-[var(--text-muted)] text-sm font-medium">© 2024 ProjectBridge. All rights reserved. Made with ❤️ for students.</p>
+          <div className="pt-6 sm:pt-8 border-t border-[var(--border)] text-center">
+            <p className="text-[var(--text-muted)] text-xs sm:text-sm font-medium">© 2024 ProjectBridge. All rights reserved. Made with ❤️ for students.</p>
           </div>
         </div>
       </footer>

@@ -4,13 +4,13 @@ export default function SplashScreen({ onComplete }) {
   const [phase, setPhase] = useState('enter'); // enter | pulse | exit
 
   useEffect(() => {
-    // Phase 1: Logo enters (0 → 600ms)
-    // Phase 2: Pulse / progress (600ms → 2400ms)
-    const pulseTimer = setTimeout(() => setPhase('pulse'), 600);
-    // Phase 3: Exit (2400ms → 3000ms)
-    const exitTimer = setTimeout(() => setPhase('exit'), 2400);
-    // Done (3000ms)
-    const doneTimer = setTimeout(() => onComplete?.(), 3000);
+    // Phase 1: Logo enters (0 → 250ms)
+    // Phase 2: Pulse / progress (250ms → 1000ms)
+    const pulseTimer = setTimeout(() => setPhase('pulse'), 250);
+    // Phase 3: Exit (1000ms → 1400ms)
+    const exitTimer = setTimeout(() => setPhase('exit'), 1000);
+    // Done (1400ms)
+    const doneTimer = setTimeout(() => onComplete?.(), 1400);
 
     return () => {
       clearTimeout(pulseTimer);
@@ -50,6 +50,7 @@ export default function SplashScreen({ onComplete }) {
             alt="ProjectBridge"
             className={`splash-logo ${phase === 'pulse' ? 'splash-logo-pulse' : ''}`}
             draggable={false}
+            style={{ imageRendering: 'crisp-edges' }}
           />
         </div>
 
