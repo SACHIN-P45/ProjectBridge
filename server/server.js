@@ -33,10 +33,16 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Normalize client URL (remove trailing slash if present)
+let clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+if (clientUrl.endsWith('/')) {
+  clientUrl = clientUrl.slice(0, -1);
+}
+
 // ── Socket.IO ────────────────────────────────────────────────
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: clientUrl,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -46,7 +52,7 @@ socketHandler(io);
 
 // ── Middleware ───────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: clientUrl,
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
