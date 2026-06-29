@@ -122,7 +122,22 @@ export default function ProjectDetail() {
   };
 
   // Real payment gateway activation
-  const handleProceedToRealPayment = () => {
+  const handleProceedToRealPayment = async () => {
+    setCheckoutLoading(true);
+    try {
+      const { loadScript } = await import('../../utils/loadScript');
+      const loaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+      if (!loaded) {
+        toast.error('Failed to load payment gateway. Please check your internet connection.');
+        return;
+      }
+    } catch (err) {
+      toast.error('An error occurred while loading the payment gateway.');
+      return;
+    } finally {
+      setCheckoutLoading(false);
+    }
+
     const options = {
       key: checkoutDetails.key,
       amount: checkoutDetails.amount,

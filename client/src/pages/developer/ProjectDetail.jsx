@@ -176,6 +176,12 @@ export default function DevProjectDetail() {
         .dpd-cols { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
         @media (max-width: 900px) { .dpd-cols { grid-template-columns: 1fr; } }
 
+        @media (max-width: 500px) {
+          .dpd-hero-body { padding: 18px 16px; }
+          .dpd-hero-title { font-size: 20px; }
+          .dpd-stat-item { padding: 12px 10px; }
+        }
+
         /* ── Section card ── */
         .dpd-section {
           background: var(--card); border: 1px solid var(--border);

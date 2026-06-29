@@ -116,8 +116,8 @@ export default function Login() {
             <ArrowLeft size={16} className="transform group-hover:-translate-x-1 transition-transform" /> Back to Homepage
           </Link>
 
-          <div className="mb-8">
-            <h2 className="font-display text-4xl font-black text-[var(--text)] tracking-tight mb-2">Welcome Back</h2>
+          <div className="mb-7 sm:mb-8">
+            <h2 className="font-display text-3xl sm:text-4xl font-black text-[var(--text)] tracking-tight mb-2">Welcome Back</h2>
             <p className="text-[var(--text-muted)] text-sm">Enter your credentials to access your dashboard.</p>
           </div>
 

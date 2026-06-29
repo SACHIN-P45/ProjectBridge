@@ -14,6 +14,7 @@ export default function DashboardLayout({ children, title }) {
   const navigate = useNavigate();
   const [resending, setResending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -83,9 +84,9 @@ export default function DashboardLayout({ children, title }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)]">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Topbar title={title} />
+      <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Topbar title={title} onMenuClick={() => setMobileNavOpen(true)} />
         <main className="flex-1 overflow-y-auto">
           <div className="page-container animate-fade-in">
             {showVerificationLock ? (

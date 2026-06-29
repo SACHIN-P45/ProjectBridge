@@ -422,6 +422,15 @@ export default function DevDashboard() {
         .dev-fade-up-4 { animation-delay: .2s; }
         .dev-fade-up-5 { animation-delay: .25s; }
         .dev-fade-up-6 { animation-delay: .3s; }
+
+        @media (max-width: 640px) {
+          .dev-hero { padding: 24px 20px; border-radius: 16px; margin-bottom: 20px; }
+          .dev-hero-name { font-size: 28px; }
+          .dev-hero-sub { font-size: 13px; margin-bottom: 16px; }
+          .dev-hero-right { align-items: flex-start; width: 100%; flex-direction: row; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); pt-4 mt-2; }
+          .dev-hero-clock { text-align: left; }
+          .dev-hero-clock strong { font-size: 24px; }
+        }
       `}</style>
 
       {/* ── Hero Banner ── */}

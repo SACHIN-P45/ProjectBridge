@@ -25,11 +25,11 @@ export default function AuthVisualShowcase() {
       <div className="relative z-10 w-full max-w-xl text-white flex flex-col justify-between h-full">
         {/* Header - Brand logo */}
         <div className="flex items-center gap-3 animate-fade-in">
-          <img 
-            src="/logo.png" 
-            alt="ProjectBridge Logo" 
-            className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
-            style={{ filter: 'brightness(0) invert(1)' }}
+          <img
+            src="/logo.png"
+            alt="ProjectBridge Logo"
+            className="h-12 w-auto object-contain"
+            style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 12px rgba(147,197,253,0.6))' }}
           />
           <div className="h-6 w-[1px] bg-white/20" />
           <span className="font-display font-bold text-lg tracking-wider text-brand-300">PROJECTBRIDGE</span>

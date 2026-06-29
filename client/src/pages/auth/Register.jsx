@@ -79,7 +79,7 @@ export default function Register() {
           {!submitted ? (
             <>
               <div className="mb-6">
-                <h2 className="font-display text-4xl font-black text-[var(--text)] tracking-tight mb-2">Create Account</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-black text-[var(--text)] tracking-tight mb-2">Create Account</h2>
                 <p className="text-[var(--text-muted)] text-sm">Setup your student profile to post your first project request.</p>
               </div>
 

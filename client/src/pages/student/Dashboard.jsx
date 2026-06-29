@@ -341,6 +341,16 @@ export default function StudentDashboard() {
         .sd-fu3{animation:sdFadeUp .45s ease .13s forwards;opacity:0;}
         .sd-fu4{animation:sdFadeUp .45s ease .17s forwards;opacity:0;}
         .sd-fu5{animation:sdFadeUp .45s ease .21s forwards;opacity:0;}
+
+        @media (max-width: 640px) {
+          .sd-hero { padding: 24px 20px; border-radius: 16px; margin-bottom: 20px; }
+          .sd-hero-name { font-size: 28px; }
+          .sd-hero-sub { font-size: 13px; margin-bottom: 16px; }
+          .sd-hero-right { align-items: flex-start; width: 100%; flex-direction: row; justify-content: space-between; border-t border-white/10 pt-4 mt-2; }
+          .sd-hero-clock { text-align: left; }
+          .sd-hero-clock strong { font-size: 24px; }
+          .sd-hero-stat-mini { gap: 16px; }
+        }
       `}</style>
 
       {/* ══ HERO ══ */}

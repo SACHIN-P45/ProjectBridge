@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const compression = require('compression');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
@@ -11,13 +12,10 @@ const { connectDB } = require('./config/db');
 const { socketHandler } = require('./socket/socketHandler');
 
 // Connect to DB
-connectDB().then(() => {
-  const { syncAllDeveloperStats, syncAllStudentStats } = require('./utils/developerStats');
-  syncAllDeveloperStats();
-  syncAllStudentStats();
-});
+connectDB();
 
 const app = express();
+app.use(compression()); // Compress all HTTP responses
 const server = http.createServer(app);
 
 // ── Security Headers (helmet) ────────────────────────────────
