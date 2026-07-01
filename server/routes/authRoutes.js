@@ -17,6 +17,22 @@ const { protect } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 // ── Standard Auth Routes ─────────────────────────────────────
+router.get('/test-email', async (req, res) => {
+  const to = req.query.to || 'sachinabi67@gmail.com';
+  const sendEmail = require('../utils/sendEmail');
+  try {
+    await sendEmail({
+      to,
+      subject: 'ProjectBridge Live Test Email',
+      text: 'This is a test email sent from the live Render server to verify your email configurations.',
+      html: '<h1>ProjectBridge Test</h1><p>This is a test email sent from the live Render server to verify your email configurations.</p>'
+    });
+    res.json({ success: true, message: `Email sent successfully to ${to}` });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 router.post('/register', register);
 router.post('/login', login);
 router.get('/verify-email/:token', verifyEmail);
