@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
+const rateLimit = require('express-rate-limit');
 const { 
   register, 
   login, 
@@ -15,6 +16,15 @@ const {
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+
+// Rate limiter for sensitive authentication endpoints (prevent brute force)
+const authSensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max: 30,                   // max 30 attempts per window per IP
+  message: { message: 'Too many authentication attempts. Please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // ── Standard Auth Routes ─────────────────────────────────────
 router.get('/test-email', async (req, res) => {
@@ -33,12 +43,12 @@ router.get('/test-email', async (req, res) => {
   }
 });
 
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', authSensitiveLimiter, register);
+router.post('/login', authSensitiveLimiter, login);
 router.get('/verify-email/:token', verifyEmail);
-router.post('/resend-verification', resendVerification);
-router.post('/forgot-password', forgotPassword);
-router.put('/reset-password/:token', resetPassword);
+router.post('/resend-verification', authSensitiveLimiter, resendVerification);
+router.post('/forgot-password', authSensitiveLimiter, forgotPassword);
+router.put('/reset-password/:token', authSensitiveLimiter, resetPassword);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, upload.single('avatar'), updateProfile);
 router.get('/developer/:id', protect, getDeveloperProfile);
