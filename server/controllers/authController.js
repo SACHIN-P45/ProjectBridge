@@ -280,6 +280,14 @@ const getMe = asyncHandler(async (req, res) => {
 
   delete user.password;
   user._id = user.id;
+  
+  // Format fields to camelCase to match client expectation
+  user.isVerified = user.is_verified;
+  user.isActive = user.is_active;
+  user.mustChangePassword = user.must_change_password;
+  user.totalEarnings = user.total_earnings;
+  user.completedProjects = user.completed_projects;
+
   res.json(user);
 });
 
@@ -330,6 +338,8 @@ const updateProfile = asyncHandler(async (req, res) => {
     totalReviews: updated.total_reviews,
     completedProjects: updated.completed_projects,
     totalEarnings: updated.total_earnings,
+    isVerified: updated.is_verified,
+    isActive: updated.is_active,
     token: generateToken(updated.id),
   });
 });
