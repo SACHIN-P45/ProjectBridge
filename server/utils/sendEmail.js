@@ -44,6 +44,8 @@ const makeHttpsRequest = (url, options, body, timeoutMs = 6000) => {
 };
 
 const sendEmail = async (options) => {
+  const errors = [];
+
   // 1. Use Brevo (Sendinblue) HTTP API if configured
   if (process.env.BREVO_API_KEY) {
     try {
@@ -74,7 +76,7 @@ const sendEmail = async (options) => {
       return;
     } catch (err) {
       console.error('❌ Brevo HTTP API Error:', err.message);
-      console.log('🔄 Falling back to other providers...');
+      errors.push(`Brevo: ${err.message}`);
     }
   }
 
@@ -105,7 +107,7 @@ const sendEmail = async (options) => {
       return;
     } catch (err) {
       console.error('❌ Resend HTTP API Error:', err.message);
-      console.log('🔄 Falling back to other providers...');
+      errors.push(`Resend: ${err.message}`);
     }
   }
 
@@ -140,7 +142,7 @@ const sendEmail = async (options) => {
       return;
     } catch (err) {
       console.error('❌ SendGrid HTTP API Error:', err.message);
-      console.log('🔄 Falling back to other providers...');
+      errors.push(`SendGrid: ${err.message}`);
     }
   }
 
@@ -152,13 +154,8 @@ const sendEmail = async (options) => {
     process.env.EMAIL_PASS;
 
   if (!isSmtpConfigured) {
-    console.log('\n==================================================');
-    console.log('📬 [EMAIL SIMULATION] SMTP / HTTP Credentials Not Configured');
-    console.log(`To:      ${options.to}`);
-    console.log(`Subject: ${options.subject}`);
-    console.log(`Message:\n${options.text}`);
-    console.log('==================================================\n');
-    return;
+    const errorMsg = 'No email providers succeeded. ' + (errors.length ? errors.join(' | ') : 'No provider credentials configured.');
+    throw new Error(errorMsg);
   }
 
   console.log('⚡ Attempting to send email via Nodemailer SMTP...');
@@ -194,7 +191,8 @@ const sendEmail = async (options) => {
     console.log(`✉️ Email successfully sent via SMTP to ${options.to}`);
   } catch (err) {
     console.error('❌ Nodemailer SMTP Error sending email:', err.message);
-    throw err;
+    const errorMsg = `SMTP: ${err.message}. ` + (errors.length ? `Other attempts: ${errors.join(' | ')}` : '');
+    throw new Error(errorMsg);
   }
 };
 
