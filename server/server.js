@@ -24,15 +24,6 @@ app.use(helmet({
   contentSecurityPolicy: false,     // Managed by client; relax for API server
 }));
 
-// ── Rate Limiting ────────────────────────────────────────────
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutes
-  max: 20,                    // max 20 requests per window per IP
-  message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // Normalize client URL (remove trailing slash if present)
 let clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 if (clientUrl.endsWith('/')) {
@@ -76,7 +67,7 @@ const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ── Routes ───────────────────────────────────────────────────
-app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
+app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/bids', require('./routes/bidRoutes'));
 app.use('/api/chats', require('./routes/chatRoutes'));
