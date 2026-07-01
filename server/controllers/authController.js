@@ -113,6 +113,11 @@ const register = asyncHandler(async (req, res) => {
   });
 });
 
+// In-memory tracker for failed login attempts to lock accounts selectively (preventing IP-based blockages)
+const failedLogins = new Map();
+const LOCK_TIME_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 5;
+
 // @desc Login user
 // @route POST /api/auth/login
 const login = asyncHandler(async (req, res) => {
@@ -124,6 +129,20 @@ const login = asyncHandler(async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+
+  // Check account lockout status
+  const lockRecord = failedLogins.get(normalizedEmail);
+  if (lockRecord && lockRecord.attempts >= MAX_ATTEMPTS) {
+    if (Date.now() < lockRecord.lockUntil) {
+      const minutesLeft = Math.ceil((lockRecord.lockUntil - Date.now()) / (60 * 1000));
+      res.status(429);
+      throw new Error(`Too many failed login attempts. This account has been locked. Please try again after ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''}.`);
+    } else {
+      // Lock has expired, reset attempts
+      failedLogins.delete(normalizedEmail);
+    }
+  }
+
   const { data: user, error: fetchError } = await supabase
     .from('users')
     .select('*')
@@ -141,9 +160,25 @@ const login = asyncHandler(async (req, res) => {
   }
 
   if (!user || !(await bcrypt.compare(password, user.password))) {
+    // Record failed login attempt
+    const record = failedLogins.get(normalizedEmail) || { attempts: 0, lockUntil: 0 };
+    record.attempts += 1;
+    if (record.attempts >= MAX_ATTEMPTS) {
+      record.lockUntil = Date.now() + LOCK_TIME_MS;
+    }
+    failedLogins.set(normalizedEmail, record);
+
     res.status(401);
-    throw new Error('Invalid email or password');
+    if (record.attempts >= MAX_ATTEMPTS) {
+      throw new Error(`Invalid email or password. This account has now been locked for 15 minutes due to too many failed attempts.`);
+    } else {
+      const attemptsLeft = MAX_ATTEMPTS - record.attempts;
+      throw new Error(`Invalid email or password. You have ${attemptsLeft} attempt${attemptsLeft > 1 ? 's' : ''} remaining before account lockout.`);
+    }
   }
+
+  // Clear failed login attempts on success
+  failedLogins.delete(normalizedEmail);
 
   if (!user.is_verified) {
     const verificationToken = crypto.randomBytes(20).toString('hex');

@@ -44,7 +44,7 @@ router.get('/test-email', async (req, res) => {
 });
 
 router.post('/register', authSensitiveLimiter, register);
-router.post('/login', authSensitiveLimiter, login);
+router.post('/login', login);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/resend-verification', authSensitiveLimiter, resendVerification);
 router.post('/forgot-password', authSensitiveLimiter, forgotPassword);
