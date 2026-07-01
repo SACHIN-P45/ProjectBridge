@@ -1,9 +1,46 @@
 const nodemailer = require('nodemailer');
 
 const sendEmail = async (options) => {
-  // 1. Use Resend HTTP API if configured (Highly recommended for Render / Serverless)
+  // 1. Use Brevo (Sendinblue) HTTP API if configured (Highly recommended: allows sending to any recipient on free tier)
+  if (process.env.BREVO_API_KEY) {
+    try {
+      console.log('⚡ Attempting to send email via Brevo HTTP API...');
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': process.env.BREVO_API_KEY,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: {
+            name: process.env.EMAIL_FROM_NAME || 'ProjectBridge',
+            email: process.env.EMAIL_FROM || 'placementportal2026@gmail.com'
+          },
+          to: [{ email: options.to }],
+          subject: options.subject,
+          textContent: options.text,
+          htmlContent: options.html
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || JSON.stringify(data));
+      }
+
+      console.log(`✉️ Email successfully sent via Brevo to ${options.to}`);
+      return;
+    } catch (err) {
+      console.error('❌ Brevo HTTP API Error:', err.message);
+      console.log('🔄 Falling back to other providers...');
+    }
+  }
+
+  // 2. Use Resend HTTP API if configured
   if (process.env.RESEND_API_KEY) {
     try {
+      console.log('⚡ Attempting to send email via Resend HTTP API...');
       const fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -25,15 +62,52 @@ const sendEmail = async (options) => {
         throw new Error(data.message || JSON.stringify(data));
       }
 
-      console.log(`✉️ Email successfully sent via Resend HTTP API to ${options.to}`);
+      console.log(`✉️ Email successfully sent via Resend to ${options.to}`);
       return;
     } catch (err) {
       console.error('❌ Resend HTTP API Error:', err.message);
-      console.log('🔄 Falling back to SMTP...');
+      console.log('🔄 Falling back to other providers...');
     }
   }
 
-  // 2. Fallback to SMTP
+  // 3. Use SendGrid HTTP API if configured
+  if (process.env.SENDGRID_API_KEY) {
+    try {
+      console.log('⚡ Attempting to send email via SendGrid HTTP API...');
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: options.to }] }],
+          from: {
+            email: process.env.EMAIL_FROM || 'placementportal2026@gmail.com',
+            name: process.env.EMAIL_FROM_NAME || 'ProjectBridge'
+          },
+          subject: options.subject,
+          content: [
+            { type: 'text/plain', value: options.text },
+            { type: 'text/html', value: options.html }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || `HTTP error! Status: ${response.status}`);
+      }
+
+      console.log(`✉️ Email successfully sent via SendGrid to ${options.to}`);
+      return;
+    } catch (err) {
+      console.error('❌ SendGrid HTTP API Error:', err.message);
+      console.log('🔄 Falling back to other providers...');
+    }
+  }
+
+  // 4. Fallback to Nodemailer SMTP (e.g. Gmail SMTP for Localhost development)
   const isSmtpConfigured = 
     process.env.EMAIL_HOST && 
     process.env.EMAIL_PORT && 
@@ -42,7 +116,7 @@ const sendEmail = async (options) => {
 
   if (!isSmtpConfigured) {
     console.log('\n==================================================');
-    console.log('📬 [EMAIL SIMULATION] SMTP / Resend Credentials Not Configured');
+    console.log('📬 [EMAIL SIMULATION] SMTP / HTTP Credentials Not Configured');
     console.log(`To:      ${options.to}`);
     console.log(`Subject: ${options.subject}`);
     console.log(`Message:\n${options.text}`);
@@ -50,7 +124,7 @@ const sendEmail = async (options) => {
     return;
   }
 
-  // Create transporter
+  console.log('⚡ Attempting to send email via Nodemailer SMTP...');
   const port = parseInt(process.env.EMAIL_PORT, 10);
   const secure = port === 465;
 
@@ -79,7 +153,7 @@ const sendEmail = async (options) => {
     await transporter.sendMail(mailOptions);
     console.log(`✉️ Email successfully sent via SMTP to ${options.to}`);
   } catch (err) {
-    console.error('❌ Nodemailer Error sending email:', err);
+    console.error('❌ Nodemailer SMTP Error sending email:', err.message);
     throw err;
   }
 };

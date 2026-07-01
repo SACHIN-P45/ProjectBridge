@@ -49,6 +49,34 @@ Render is used to host the Node.js/Express server and the Socket.IO server.
 | `GITHUB_CLIENT_ID` | *GitHub OAuth client ID* |
 | `GITHUB_CLIENT_SECRET` | *GitHub OAuth client secret* |
 
+#### Production Email Delivery Configuration (Choose One)
+Since Render blocks outbound SMTP ports (25, 465, 587) by default, you must configure one of the following HTTP APIs for reliable email delivery:
+
+##### Option A: Brevo (Recommended - Easiest & Free)
+1. Sign up for a free account at [Brevo](https://www.brevo.com/).
+2. Generate an API Key under **SMTP & API** settings.
+3. Add the following environment variables in Render:
+   - `BREVO_API_KEY`: *Your Brevo API key*
+   - `EMAIL_FROM`: *Your verified sender email address in Brevo (can be your personal Gmail)*
+   - `EMAIL_FROM_NAME`: `ProjectBridge`
+
+##### Option B: Resend
+1. Sign up at [Resend](https://resend.com/).
+2. Create an API Key.
+3. *Note: On the free tier, you can only send to your own registered email address unless you verify a custom domain.*
+4. Add the following environment variables in Render:
+   - `RESEND_API_KEY`: *Your Resend API key*
+   - `EMAIL_FROM`: `onboarding@resend.dev` (or your custom domain email once verified)
+   - `EMAIL_FROM_NAME`: `ProjectBridge`
+
+##### Option C: SendGrid
+1. Sign up at [SendGrid](https://sendgrid.com/).
+2. Generate a Web API Key.
+3. Add the following environment variables in Render:
+   - `SENDGRID_API_KEY`: *Your SendGrid API key*
+   - `EMAIL_FROM`: *Your verified sender email address in SendGrid*
+   - `EMAIL_FROM_NAME`: `ProjectBridge`
+
 6. Click **Deploy Web Service**. Render will build and start your server. Note your Render app URL (e.g. `https://projectbridge-backend.onrender.com`).
 
 ---
