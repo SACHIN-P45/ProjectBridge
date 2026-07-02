@@ -2,6 +2,8 @@ const asyncHandler = require('express-async-handler');
 const crypto = require('crypto');
 const razorpay = require('../config/razorpay');
 const { supabase } = require('../config/db');
+const sendEmail = require('../utils/sendEmail');
+const { paymentReceivedEmail, paymentConfirmationEmail, adminAlertEmail } = require('../utils/emailTemplates');
 
 // @desc Create Razorpay order
 // @route POST /api/payments/create-order
@@ -200,6 +202,61 @@ const verifyPayment = asyncHandler(async (req, res) => {
       });
   }
 
+  // Notify developer and student via email
+  try {
+    const { data: student } = await supabase
+      .from('users')
+      .select('email, name')
+      .eq('id', project.student_id)
+      .maybeSingle();
+
+    const { data: developer } = await supabase
+      .from('users')
+      .select('email, name')
+      .eq('id', project.assigned_developer_id)
+      .maybeSingle();
+
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
+    // 1. Send Payment Received email to Developer
+    if (developer && developer.email) {
+      const devEmailOptions = paymentReceivedEmail({
+        developerName: developer.name || 'Developer',
+        projectTitle: project.title,
+        amount: payment.amount,
+        paymentType: isFirst ? 'first_50' : 'second_50',
+        dashboardLink: `${clientUrl}/developer/assigned`,
+        clientUrl
+      });
+      sendEmail({
+        to: developer.email,
+        subject: devEmailOptions.subject,
+        text: devEmailOptions.text,
+        html: devEmailOptions.html
+      }).catch(err => console.error('Failed to send payment received email to developer:', err));
+    }
+
+    // 2. Send Payment Confirmation receipt email to Student
+    if (student && student.email) {
+      const studEmailOptions = paymentConfirmationEmail({
+        studentName: student.name || 'Student',
+        projectTitle: project.title,
+        amount: payment.amount,
+        paymentType: isFirst ? 'first_50' : 'second_50',
+        dashboardLink: `${clientUrl}/student/projects/${project.id}`,
+        clientUrl
+      });
+      sendEmail({
+        to: student.email,
+        subject: studEmailOptions.subject,
+        text: studEmailOptions.text,
+        html: studEmailOptions.html
+      }).catch(err => console.error('Failed to send payment confirmation email to student:', err));
+    }
+  } catch (emailErr) {
+    console.error('Error sending payment emails:', emailErr);
+  }
+
   payment._id = payment.id;
   res.json({ message: 'Payment verified successfully', payment });
 });
@@ -280,10 +337,10 @@ const requestRefund = asyncHandler(async (req, res) => {
 
   if (updateError) throw updateError;
 
-  // Notify admins
+  // Notify admins via DB notifications
   const { data: admins } = await supabase
     .from('users')
-    .select('id')
+    .select('id, name, email')
     .eq('role', 'admin');
 
   for (const admin of admins || []) {
@@ -297,6 +354,35 @@ const requestRefund = asyncHandler(async (req, res) => {
         link: '/admin/payments',
         related_id: payment.project?.id || payment.id,
       });
+  }
+
+  // Notify admins via email
+  try {
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    for (const admin of admins || []) {
+      if (admin.email) {
+        const adminEmailOptions = adminAlertEmail({
+          adminName: admin.name || 'Admin',
+          alertType: 'refund_request',
+          details: {
+            'Project': payment.project?.title || 'Project',
+            'Amount': `₹${payment.amount.toLocaleString()}`,
+            'Reason': reason,
+            'Refund ID': payment.id
+          },
+          actionLink: `${clientUrl}/admin/payments`,
+          clientUrl
+        });
+        sendEmail({
+          to: admin.email,
+          subject: adminEmailOptions.subject,
+          text: adminEmailOptions.text,
+          html: adminEmailOptions.html
+        }).catch(err => console.error('Failed to send admin refund email:', err));
+      }
+    }
+  } catch (emailErr) {
+    console.error('Error sending admin refund emails:', emailErr);
   }
 
   updatedPayment._id = updatedPayment.id;
