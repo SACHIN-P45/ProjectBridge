@@ -273,7 +273,7 @@ export default function Landing() {
                     </div>
                     <div className="p-1">
                       <Link to={user.role === 'student' ? '/student/dashboard' : user.role === 'admin' ? '/admin/dashboard' : '/developer/dashboard'} onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors"><LayoutDashboard size={16} className="text-brand-500" />My Dashboard</Link>
-                      {user.role !== 'admin' && (<Link to={user.role === 'student' ? '/student/profile' : '/developer/profile'} onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors"><User size={16} className="text-violet-500" />My Profile</Link>)}
+                      <Link to={user.role === 'admin' ? '/admin/profile' : user.role === 'student' ? '/student/profile' : '/developer/profile'} onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--bg-secondary)] transition-colors"><User size={16} className="text-violet-500" />My Profile</Link>
                       <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"><LogOut size={16} />Sign Out</button>
                     </div>
                   </div>

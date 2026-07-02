@@ -34,6 +34,7 @@ const adminLinks = [
   { to: '/admin/payments', icon: CreditCard, label: 'Payments' },
   { to: '/admin/reviews', icon: Star, label: 'Reviews' },
   { to: '/admin/notifications', icon: Bell, label: 'Notifications' },
+  { to: '/admin/profile', icon: User, label: 'Profile' },
 ];
 
 export default function Sidebar({ mobileOpen, onClose }) {

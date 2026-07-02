@@ -139,7 +139,7 @@ export default function StudentProfile() {
                 
                 {/* Symmetrical Circular Avatar centered on the boundary */}
                 <div className="relative -mt-14 sm:-mt-16 z-20">
-                  <div className="w-28 h-28 rounded-full overflow-hidden p-1 bg-[var(--card)] border-4 border-[var(--border)] shadow-2xl transition-all duration-300 hover:scale-105 hover:border-brand-500 flex items-center justify-center">
+                  <div className="group relative w-28 h-28 rounded-full overflow-hidden p-1 bg-[var(--card)] border-4 border-[var(--border)] shadow-2xl transition-all duration-300 hover:scale-105 hover:border-brand-500 flex items-center justify-center">
                     {preview ? (
                       <img src={preview} alt="Profile" className="w-full h-full object-cover rounded-full" />
                     ) : (

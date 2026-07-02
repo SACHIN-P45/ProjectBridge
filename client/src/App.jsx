@@ -42,6 +42,7 @@ const AdminProjects = lazy(() => import('./pages/admin/Projects'));
 const AdminPayments = lazy(() => import('./pages/admin/Payments'));
 const AdminReviews = lazy(() => import('./pages/admin/Reviews'));
 const AdminNotifications = lazy(() => import('./pages/admin/Notifications'));
+const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 
 // Guards
 const ProtectedRoute = ({ children, role }) => {
@@ -109,6 +110,7 @@ export default function App() {
             <Route path="/admin/payments" element={<ProtectedRoute role="admin"><AdminPayments /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute role="admin"><AdminReviews /></ProtectedRoute>} />
             <Route path="/admin/notifications" element={<ProtectedRoute role="admin"><AdminNotifications /></ProtectedRoute>} />
+            <Route path="/admin/profile" element={<ProtectedRoute role="admin"><AdminProfile /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
