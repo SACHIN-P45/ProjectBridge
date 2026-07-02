@@ -1,6 +1,8 @@
 const asyncHandler = require('express-async-handler');
 const { supabase } = require('../config/db');
 const { uploadToCloudinary } = require('../utils/cloudinaryUpload');
+const sendEmail = require('../utils/sendEmail');
+const { projectStatusUpdateEmail, sourceCodeUploadedEmail } = require('../utils/emailTemplates');
 
 // @desc Create project
 // @route POST /api/projects
@@ -255,6 +257,59 @@ const updateProject = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // Notify student of project updates / status updates
+  const isStatusChanged = req.body.status !== undefined && req.body.status !== currentProject.status;
+  const hasProgressNote = req.body.progressUpdate !== undefined;
+
+  if (isStatusChanged || hasProgressNote) {
+    try {
+      const { data: student } = await supabase
+        .from('users')
+        .select('email, name')
+        .eq('id', currentProject.student_id)
+        .maybeSingle();
+
+      if (student && student.email) {
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+        const newStatus = req.body.status || currentProject.status;
+        const progressNote = req.body.progressUpdate || '';
+
+        // Insert database notification
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: currentProject.student_id,
+            type: 'project_update',
+            title: isStatusChanged ? `Project Status Updated` : `New Progress Update`,
+            message: isStatusChanged 
+              ? `Your project "${currentProject.title}" is now ${newStatus}` 
+              : `Developer posted an update on "${currentProject.title}": ${progressNote.slice(0, 50)}...`,
+            link: `/student/projects/${currentProject.id}`,
+            related_id: currentProject.id,
+          });
+
+        // Send email
+        const emailOptions = projectStatusUpdateEmail({
+          studentName: student.name || 'Student',
+          projectTitle: currentProject.title,
+          newStatus: newStatus,
+          progressNote: progressNote,
+          viewLink: `${clientUrl}/student/projects/${currentProject.id}`,
+          clientUrl
+        });
+
+        sendEmail({
+          to: student.email,
+          subject: emailOptions.subject,
+          text: emailOptions.text,
+          html: emailOptions.html
+        }).catch(err => console.error('Failed to send project status update email:', err));
+      }
+    } catch (emailErr) {
+      console.error('Error sending project update emails:', emailErr);
+    }
+  }
+
   updated._id = updated.id;
   res.json(updated);
 });
@@ -293,7 +348,7 @@ const uploadSourceCode = asyncHandler(async (req, res) => {
 
   if (updateError) throw updateError;
 
-  // Notify student
+  // Notify student via DB notifications
   await supabase
     .from('notifications')
     .insert({
@@ -304,6 +359,35 @@ const uploadSourceCode = asyncHandler(async (req, res) => {
       link: `/student/projects/${project.id}`,
       related_id: project.id,
     });
+
+  // Notify student via email
+  try {
+    const { data: student } = await supabase
+      .from('users')
+      .select('email, name')
+      .eq('id', project.student_id)
+      .maybeSingle();
+
+    if (student && student.email) {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      const emailOptions = sourceCodeUploadedEmail({
+        studentName: student.name || 'Student',
+        projectTitle: project.title,
+        developerName: req.user.name || 'Developer',
+        viewLink: `${clientUrl}/student/projects/${project.id}`,
+        clientUrl
+      });
+
+      sendEmail({
+        to: student.email,
+        subject: emailOptions.subject,
+        text: emailOptions.text,
+        html: emailOptions.html
+      }).catch(err => console.error('Failed to send source code uploaded email:', err));
+    }
+  } catch (emailErr) {
+    console.error('Error sending source code uploaded email:', emailErr);
+  }
 
   res.json({ message: 'Source code uploaded', sourceCodeUrl: result.secure_url });
 });

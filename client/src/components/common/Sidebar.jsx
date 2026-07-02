@@ -68,7 +68,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
             <img
               src="/logo.png"
               alt="ProjectBridge"
-              className="w-10 h-10 object-contain object-top"
+              className="w-10 h-10 object-contain object-top logo-img"
               style={{ objectPosition: '40% 10%', transform: 'scale(2.2) translate(3px, 3px)' }}
             />
           </div>
@@ -77,7 +77,7 @@ export default function Sidebar({ mobileOpen, onClose }) {
             <img
               src="/logo.png"
               alt="ProjectBridge"
-              className="h-8 w-auto flex-shrink-0 object-contain"
+              className="h-8 w-auto flex-shrink-0 object-contain logo-img"
             />
             <span className="text-xl font-display font-black tracking-tight text-[var(--text)] select-none truncate">
               Project<span className="text-brand-500">Bridge</span>

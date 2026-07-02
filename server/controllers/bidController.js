@@ -1,5 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const { supabase } = require('../config/db');
+const sendEmail = require('../utils/sendEmail');
+const { newBidEmail, bidAcceptedEmail } = require('../utils/emailTemplates');
 
 // @desc Submit a bid
 // @route POST /api/bids
@@ -54,7 +56,7 @@ const submitBid = asyncHandler(async (req, res) => {
     .update({ bid_count: (project.bid_count || 0) + 1 })
     .eq('id', projectId);
 
-  // Notify student
+  // Notify student via db notifications
   await supabase
     .from('notifications')
     .insert({
@@ -65,6 +67,38 @@ const submitBid = asyncHandler(async (req, res) => {
       link: `/student/projects/${projectId}`,
       related_id: bid.id,
     });
+
+  // Notify student via email
+  try {
+    const { data: student } = await supabase
+      .from('users')
+      .select('email, name')
+      .eq('id', project.student_id)
+      .maybeSingle();
+
+    if (student && student.email) {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      const emailOptions = newBidEmail({
+        studentName: student.name || 'Student',
+        projectTitle: project.title,
+        developerName: req.user.name || 'A developer',
+        bidAmount: Number(price),
+        deliveryDays: Number(deliveryDays),
+        proposal,
+        viewLink: `${clientUrl}/student/projects/${projectId}`,
+        clientUrl
+      });
+      
+      sendEmail({
+        to: student.email,
+        subject: emailOptions.subject,
+        text: emailOptions.text,
+        html: emailOptions.html
+      }).catch(err => console.error('Failed to send new bid email:', err));
+    }
+  } catch (emailErr) {
+    console.error('Error fetching student for bid email:', emailErr);
+  }
 
   const { data: populated, error: popError } = await supabase
     .from('bids')
@@ -196,7 +230,7 @@ const acceptBid = asyncHandler(async (req, res) => {
       });
   }
 
-  // Notify developer
+  // Notify developer via DB notifications
   await supabase
     .from('notifications')
     .insert({
@@ -207,6 +241,31 @@ const acceptBid = asyncHandler(async (req, res) => {
       link: `/developer/assigned`,
       related_id: project.id,
     });
+
+  // Notify developer via email
+  try {
+    if (bid.developer && bid.developer.email) {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      const emailOptions = bidAcceptedEmail({
+        developerName: bid.developer.name || 'Developer',
+        projectTitle: project.title,
+        studentName: req.user.name || 'Student',
+        bidAmount: Number(bid.price),
+        deliveryDays: Number(bid.delivery_days),
+        dashboardLink: `${clientUrl}/developer/assigned`,
+        clientUrl
+      });
+
+      sendEmail({
+        to: bid.developer.email,
+        subject: emailOptions.subject,
+        text: emailOptions.text,
+        html: emailOptions.html
+      }).catch(err => console.error('Failed to send bid accepted email:', err));
+    }
+  } catch (emailErr) {
+    console.error('Error sending bid accepted email:', emailErr);
+  }
 
   // Fetch updated bid and project to return
   const { data: updatedBid } = await supabase
