@@ -225,9 +225,9 @@ export default function Landing() {
             <img
               src="/logo.png"
               alt="ProjectBridge Logo"
-              className="h-8 sm:h-10 w-auto object-contain drop-shadow-[0_0_10px_rgba(59,130,246,0.35)] transition-transform duration-300 group-hover:scale-105"
+              className="h-8 sm:h-10 w-auto object-contain logo-img transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="font-display font-black text-lg sm:text-xl text-[var(--text)] tracking-tight hidden xs:block">
+            <span className="font-display font-black text-lg sm:text-xl text-[var(--text)] tracking-tight">
               Project<span className="text-brand-500">Bridge</span>
             </span>
           </Link>
@@ -732,7 +732,7 @@ export default function Landing() {
               <img
                 src="/logo.png"
                 alt="ProjectBridge Logo"
-                className="h-8 w-auto object-contain opacity-60 hover:opacity-90 transition-all duration-300 grayscale hover:grayscale-0"
+                className="h-8 w-auto object-contain logo-img opacity-60 hover:opacity-90 transition-all duration-300 grayscale hover:grayscale-0"
               />
               <span className="font-display font-black text-lg text-[var(--text-muted)]">Project<span className="text-brand-500">Bridge</span></span>
             </div>
