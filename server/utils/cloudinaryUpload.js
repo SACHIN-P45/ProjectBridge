@@ -28,7 +28,7 @@ const uploadToLocalDisk = (buffer, folder, originalName) => {
   fs.writeFileSync(filePath, buffer);
   
   const port = process.env.PORT || 5000;
-  const baseUrl = `http://localhost:${port}`;
+  const baseUrl = process.env.SERVER_URL || `http://localhost:${port}`;
   
   return {
     secure_url: `${baseUrl}/uploads/${folder}/${filename}`,

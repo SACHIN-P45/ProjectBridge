@@ -22,6 +22,7 @@ const server = http.createServer(app);
 app.use(helmet({
   crossOriginEmbedderPolicy: false, // Allow Socket.IO & external assets
   contentSecurityPolicy: false,     // Managed by client; relax for API server
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow cross-origin resource requests (e.g. avatars)
 }));
 
 // Normalize client URL (remove trailing slash if present)

@@ -287,6 +287,10 @@ const getMe = asyncHandler(async (req, res) => {
   user.mustChangePassword = user.must_change_password;
   user.totalEarnings = user.total_earnings;
   user.completedProjects = user.completed_projects;
+  user.techStack = user.tech_stack;
+  user.githubUrl = user.github_url;
+  user.portfolioUrl = user.portfolio_url;
+  user.totalReviews = user.total_reviews;
 
   res.json(user);
 });
